@@ -12,9 +12,14 @@ final class NetworkMonitor: ObservableObject {
     }
 
     enum UUStatus: Equatable {
-        case running(serviceReady: Bool)
+        case running
+        case backgroundOnly
         case installedNotRunning
         case notInstalled
+
+        var canLaunch: Bool {
+            self == .installedNotRunning || self == .backgroundOnly
+        }
     }
 
     static let uuAppPath = "/Applications/UURemote.app"
@@ -28,22 +33,49 @@ final class NetworkMonitor: ObservableObject {
     @Published private(set) var wan = Probe()
     @Published private(set) var uuService = Probe()
     @Published private(set) var uuStatus: UUStatus = .notInstalled
+    @Published private(set) var isLaunchingUU = false
+    @Published var lastError: String?
+    private(set) var uuLaunchTask: Task<Void, Never>?
     @Published private(set) var isChecking = false
     @Published private(set) var lastChecked: Date?
 
     private let pathMonitor = NWPathMonitor()
     private var timer: Timer?
+    private var uuStatusTimer: Timer?
+    private var workspaceObservers: [NSObjectProtocol] = []
+    private let uuEnvironment: UUApplicationEnvironment
 
-    init() {
+    init(uuEnvironment: UUApplicationEnvironment? = nil) {
+        self.uuEnvironment = uuEnvironment ?? .live
         pathMonitor.pathUpdateHandler = { [weak self] path in
             DispatchQueue.main.async { self?.update(path: path) }
         }
         pathMonitor.start(queue: DispatchQueue(label: "remotemate.path"))
         refreshUUStatus()
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
+            workspaceObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                      app.bundleIdentifier == UUApplicationEnvironment.bundleIdentifier else { return }
+                Task { @MainActor [weak self] in self?.refreshUUStatus() }
+            })
+        }
+    }
+
+    deinit {
+        timer?.invalidate()
+        uuStatusTimer?.invalidate()
+        pathMonitor.cancel()
+        for observer in workspaceObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
     }
 
     /// 面板打开时周期刷新，关闭后停止，避免后台持续 ping。
     func startAutoRefresh() {
+        refreshUUStatus()
+        uuStatusTimer?.invalidate()
+        uuStatusTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshUUStatus() }
+        }
         refresh()
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
@@ -54,6 +86,8 @@ final class NetworkMonitor: ObservableObject {
     func stopAutoRefresh() {
         timer?.invalidate()
         timer = nil
+        uuStatusTimer?.invalidate()
+        uuStatusTimer = nil
     }
 
     func refresh() {
@@ -80,17 +114,40 @@ final class NetworkMonitor: ObservableObject {
     }
 
     func openUU(activate: Bool = true) {
-        let config = NSWorkspace.OpenConfiguration()
-        config.activates = activate
-        NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: Self.uuAppPath), configuration: config)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.refreshUUStatus() }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in self?.refreshUUStatus() }
+        guard !isLaunchingUU else { return }
+        refreshUUStatus()
+        guard uuStatus != .notInstalled else {
+            lastError = "未找到 UU 远程，请先将其安装到应用程序文件夹。"
+            return
+        }
+        lastError = nil
+        isLaunchingUU = true
+        uuLaunchTask = Task { [weak self] in
+            guard let self else { return }
+            defer { self.isLaunchingUU = false }
+            do {
+                try await self.uuEnvironment.open(activate)
+                // 启动回调与 Workspace 主程序列表的更新可能相差片刻。
+                for _ in 0..<10 {
+                    self.refreshUUStatus()
+                    if self.uuStatus == .running { return }
+                    try await Task.sleep(nanoseconds: 200_000_000)
+                }
+                self.refreshUUStatus()
+                if self.uuStatus != .running {
+                    self.lastError = "已请求启动 UU 远程，但尚未检测到主程序，请重试。"
+                }
+            } catch {
+                self.refreshUUStatus()
+                self.lastError = "启动 UU 远程失败：\(error.localizedDescription)"
+            }
+        }
     }
 
-    /// 已安装但未运行时，后台拉起 UU 远程（不抢占前台焦点）。
+    /// 后台守护服务不代表客户端已启动；仅后台服务运行时也应拉起主程序。
     func launchUUIfNeeded() {
         refreshUUStatus()
-        guard uuStatus == .installedNotRunning else { return }
+        guard uuStatus.canLaunch else { return }
         openUU(activate: false)
     }
 
@@ -113,18 +170,16 @@ final class NetworkMonitor: ObservableObject {
         interfaceText = type
     }
 
-    private func refreshUUStatus() {
-        guard FileManager.default.fileExists(atPath: Self.uuAppPath) else {
+    func refreshUUStatus() {
+        if !uuEnvironment.isInstalled() {
             uuStatus = .notInstalled
-            return
+        } else if uuEnvironment.isClientRunning() {
+            uuStatus = .running
+        } else if uuEnvironment.isBackgroundRunning() {
+            uuStatus = .backgroundOnly
+        } else {
+            uuStatus = .installedNotRunning
         }
-        let running = Self.processRunning("UURemote") || Self.processRunning("UURemoteDaemon")
-        let service = Self.processRunning("UURemoteServer") || Self.processRunning("UURemoteService")
-        uuStatus = running || service ? .running(serviceReady: service) : .installedNotRunning
-    }
-
-    private static func processRunning(_ name: String) -> Bool {
-        Shell.run("/usr/bin/pgrep", ["-x", name]).status == 0
     }
 
     private static func probe(latency: Double, loss: Double, good: Double, fair: Double, detail: String) -> Probe {

@@ -163,9 +163,10 @@ struct PanelView: View {
                 StatusDot(level: uuLevel)
                 Text("UU 远程").font(.callout)
                 Spacer()
-                Text(uuText).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
-                if network.uuStatus == .installedNotRunning {
+                Text(network.isLaunchingUU ? "启动中…" : uuText).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                if network.uuStatus.canLaunch {
                     Button("打开") { network.openUU() }.controlSize(.small)
+                        .disabled(network.isLaunchingUU)
                 }
             }
         }
@@ -173,14 +174,16 @@ struct PanelView: View {
 
     private var uuLevel: NetworkMonitor.Level {
         switch network.uuStatus {
-        case .running(let ready): return ready ? .good : .fair
+        case .running: return .good
+        case .backgroundOnly: return .fair
         case .installedNotRunning, .notInstalled: return .bad
         }
     }
 
     private var uuText: String {
         switch network.uuStatus {
-        case .running(let ready): return ready ? "运行中 · 可被控" : "运行中 · 被控服务未启动"
+        case .running: return "主程序运行中"
+        case .backgroundOnly: return "仅后台服务运行"
         case .installedNotRunning: return "未运行"
         case .notInstalled: return "未安装"
         }
@@ -374,7 +377,7 @@ struct PanelView: View {
 
     @ViewBuilder
     private var errors: some View {
-        ForEach(Array([sleep.lastError, display.lastError, prefs.lastError].compactMap { $0 }.enumerated()), id: \.offset) { _, message in
+        ForEach(Array([sleep.lastError, display.lastError, prefs.lastError, network.lastError].compactMap { $0 }.enumerated()), id: \.offset) { _, message in
             HStack(alignment: .top, spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                 Text(message).font(.caption).fixedSize(horizontal: false, vertical: true)
@@ -383,6 +386,7 @@ struct PanelView: View {
                     sleep.lastError = nil
                     display.lastError = nil
                     prefs.lastError = nil
+                    network.lastError = nil
                 } label: {
                     Image(systemName: "xmark")
                 }

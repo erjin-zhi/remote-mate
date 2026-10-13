@@ -167,35 +167,38 @@ struct PanelView: View {
     }
 
     private var uuApplicationRow: some View {
-        Button {
-            network.openUU(activate: true)
-        } label: {
-            HStack(spacing: 8) {
-                StatusDot(level: uuLevel)
-                Text("UU 远程").font(.callout)
-                Spacer()
-                Text(network.isLaunchingUU ? "启动中…" : uuText)
-                    .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+        HStack(spacing: 8) {
+            StatusDot(level: uuLevel)
+            Text("UU 远程").font(.callout)
+            Spacer()
+            Text(network.isLaunchingUU ? "启动中…" : uuText)
+                .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+            if network.uuStatus == .running {
                 Image(systemName: "arrow.up.forward")
                     .font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text("打开")
+                    .font(.caption)
+                    .foregroundStyle(network.isLaunchingUU ? Color.secondary : Color.accentColor)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(RoundedRectangle(cornerRadius: 5)
+                        .fill(Color.accentColor.opacity(0.12)))
             }
-            .padding(.vertical, 5)
-            .contentShape(Rectangle())
-            .background(RoundedRectangle(cornerRadius: 5)
-                .fill(Color.accentColor.opacity(hoveringUU ? 0.1 : 0)))
         }
-        .buttonStyle(.plain)
-        .disabled(network.isLaunchingUU)
-        .help("打开 UU 远程并切换到前台")
-        .accessibilityLabel("打开 UU 远程并切换到前台")
-        .accessibilityValue(network.isLaunchingUU ? "启动中" : uuText)
-        .onHover { inside in
-            hoveringUU = inside
-            if inside { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
+        .padding(.vertical, 5)
+        .background(RoundedRectangle(cornerRadius: 5)
+            .fill(Color.accentColor.opacity(hoveringUU ? 0.1 : 0)))
+        .accessibilityHidden(true)
+        .overlay {
+            HandCursorButton(
+                isEnabled: !network.isLaunchingUU,
+                label: network.uuStatus == .running ? "切换到 UU 远程" : "打开 UU 远程",
+                value: network.isLaunchingUU ? "启动中" : uuText,
+                onHover: { hoveringUU = $0 },
+                action: { network.openUU(activate: true) }
+            )
         }
-        .onDisappear {
-            if hoveringUU { NSCursor.arrow.set(); hoveringUU = false }
-        }
+        .onDisappear { hoveringUU = false }
     }
 
     private var uuLevel: NetworkMonitor.Level {

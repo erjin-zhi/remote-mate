@@ -22,6 +22,8 @@ final class NetworkMonitor: ObservableObject {
         }
     }
 
+    var isUUInstalled: Bool { uuStatus != .notInstalled }
+
     static let uuAppPath = "/Applications/UURemote.app"
     static let uuServiceHost = "api.nrd.nie.163.com"
     static let wanHost = "223.5.5.5"
@@ -99,15 +101,15 @@ final class NetworkMonitor: ObservableObject {
             proxyTUN = routes.tun
             async let lanResult = Self.ping(routes.gateway, interface: routes.interface)
             async let wanResult = Self.ping(Self.wanHost, interface: routes.interface)
-            async let uuResult = Self.https(Self.uuServiceHost)
+            async let uuResult = probeUUService(using: Self.https)
             let (l, w, u) = await (lanResult, wanResult, uuResult)
             lan = l.map { Self.probe(latency: $0.ms, loss: $0.loss, good: 10, fair: 50, detail: "网关 \(routes.gateway ?? "")") }
                 ?? Probe(level: .bad, value: routes.gateway == nil ? "无网关" : "不可达", detail: "网关 \(routes.gateway ?? "-")")
             wan = w.map { Self.probe(latency: $0.ms, loss: $0.loss, good: 60, fair: 150, detail: "Ping \(Self.wanHost)") }
                 ?? Probe(level: .bad, value: "不可达", detail: "Ping \(Self.wanHost)")
-            uuService = u.map { Self.probe(latency: $0, loss: 0, good: 300, fair: 800, detail: "HTTPS \(Self.uuServiceHost)") }
-                ?? Probe(level: .bad, value: "不可达", detail: "HTTPS \(Self.uuServiceHost)")
             refreshUUStatus()
+            uuService = isUUInstalled ? (u ?? Probe(level: .unknown, value: "未检测"))
+                : Probe(level: .unknown, value: "未检测")
             lastChecked = Date()
             isChecking = false
         }
@@ -146,6 +148,7 @@ final class NetworkMonitor: ObservableObject {
 
     /// 后台守护服务不代表客户端已启动；仅后台服务运行时也应拉起主程序。
     func launchUUIfNeeded() {
+        // 每次一键开启都重新查询系统，不能依赖面板上一次显示的状态。
         refreshUUStatus()
         guard uuStatus.canLaunch else { return }
         openUU(activate: false)
@@ -173,6 +176,7 @@ final class NetworkMonitor: ObservableObject {
     func refreshUUStatus() {
         if !uuEnvironment.isInstalled() {
             uuStatus = .notInstalled
+            uuService = Probe(level: .unknown, value: "未检测")
         } else if uuEnvironment.isClientRunning() {
             uuStatus = .running
         } else if uuEnvironment.isBackgroundRunning() {
@@ -180,6 +184,15 @@ final class NetworkMonitor: ObservableObject {
         } else {
             uuStatus = .installedNotRunning
         }
+    }
+
+    /// 未安装时不发起 UU 网络请求；检测期间卸载也不保留过期结果。
+    func probeUUService(using request: (String) async -> Double?) async -> Probe? {
+        guard uuEnvironment.isInstalled() else { return nil }
+        let latency = await request(Self.uuServiceHost)
+        guard uuEnvironment.isInstalled() else { return nil }
+        return latency.map { Self.probe(latency: $0, loss: 0, good: 300, fair: 800, detail: "HTTPS \(Self.uuServiceHost)") }
+            ?? Probe(level: .bad, value: "不可达", detail: "HTTPS \(Self.uuServiceHost)")
     }
 
     private static func probe(latency: Double, loss: Double, good: Double, fair: Double, detail: String) -> Probe {

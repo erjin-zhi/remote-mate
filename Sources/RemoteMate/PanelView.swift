@@ -10,6 +10,7 @@ struct PanelView: View {
     @State private var customHeight = ""
     @State private var editingCustom = false
     @State private var showPreferences = false
+    @State private var hoveringUU = false
     @StateObject private var panelWindow = PanelWindowController()
     @FocusState private var focusedField: CustomField?
 
@@ -158,17 +159,42 @@ struct PanelView: View {
         }) {
             ProbeRow(title: "内网", probe: network.lan)
             ProbeRow(title: "外网", probe: network.wan)
-            ProbeRow(title: "UU 服务", probe: network.uuService)
+            if network.isUUInstalled {
+                ProbeRow(title: "UU 服务", probe: network.uuService)
+                uuApplicationRow
+            }
+        }
+    }
+
+    private var uuApplicationRow: some View {
+        Button {
+            network.openUU(activate: true)
+        } label: {
             HStack(spacing: 8) {
                 StatusDot(level: uuLevel)
                 Text("UU 远程").font(.callout)
                 Spacer()
-                Text(network.isLaunchingUU ? "启动中…" : uuText).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
-                if network.uuStatus.canLaunch {
-                    Button("打开") { network.openUU() }.controlSize(.small)
-                        .disabled(network.isLaunchingUU)
-                }
+                Text(network.isLaunchingUU ? "启动中…" : uuText)
+                    .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                Image(systemName: "arrow.up.forward")
+                    .font(.caption).foregroundStyle(.secondary)
             }
+            .padding(.vertical, 5)
+            .contentShape(Rectangle())
+            .background(RoundedRectangle(cornerRadius: 5)
+                .fill(Color.accentColor.opacity(hoveringUU ? 0.1 : 0)))
+        }
+        .buttonStyle(.plain)
+        .disabled(network.isLaunchingUU)
+        .help("打开 UU 远程并切换到前台")
+        .accessibilityLabel("打开 UU 远程并切换到前台")
+        .accessibilityValue(network.isLaunchingUU ? "启动中" : uuText)
+        .onHover { inside in
+            hoveringUU = inside
+            if inside { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
+        }
+        .onDisappear {
+            if hoveringUU { NSCursor.arrow.set(); hoveringUU = false }
         }
     }
 

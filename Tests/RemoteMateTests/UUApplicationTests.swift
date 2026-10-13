@@ -103,4 +103,72 @@ final class UUApplicationTests: XCTestCase {
         await monitor.uuLaunchTask?.value
         XCTAssertEqual(monitor.uuStatus, .running)
     }
+
+    func testMissingApplicationSkipsProcessAndServiceChecks() async {
+        var serviceRequests = 0
+        let monitor = NetworkMonitor(uuEnvironment: .init(
+            isInstalled: { false },
+            isClientRunning: { XCTFail("Uninstalled app must not query client processes"); return false },
+            isBackgroundRunning: { XCTFail("Uninstalled app must not query services"); return false },
+            open: { _ in XCTFail("Uninstalled app must not launch") }
+        ))
+        let result = await monitor.probeUUService { _ in serviceRequests += 1; return 20 }
+        XCTAssertNil(result)
+        XCTAssertEqual(serviceRequests, 0)
+        XCTAssertFalse(monitor.isUUInstalled)
+    }
+
+    func testInstalledApplicationProbesServiceAndDropsResultIfUninstalled() async {
+        var installed = true
+        let monitor = NetworkMonitor(uuEnvironment: .init(
+            isInstalled: { installed }, isClientRunning: { false },
+            isBackgroundRunning: { false }, open: { _ in }
+        ))
+        var serviceRequests = 0
+        let success = await monitor.probeUUService { _ in serviceRequests += 1; return 20 }
+        XCTAssertEqual(serviceRequests, 1)
+        XCTAssertEqual(success?.value, "20 ms")
+        let removed = await monitor.probeUUService { _ in installed = false; return 30 }
+        XCTAssertNil(removed)
+        monitor.refreshUUStatus()
+        XCTAssertFalse(monitor.isUUInstalled)
+        XCTAssertEqual(monitor.uuService.value, "未检测")
+    }
+
+    func testClickAlreadyRunningClientRequestsForegroundActivation() async {
+        var requests: [Bool] = []
+        let monitor = NetworkMonitor(uuEnvironment: .init(
+            isInstalled: { true }, isClientRunning: { true },
+            isBackgroundRunning: { true }, open: { activate in requests.append(activate) }
+        ))
+        monitor.openUU(activate: true)
+        await monitor.uuLaunchTask?.value
+        XCTAssertEqual(requests, [true])
+        XCTAssertNil(monitor.lastError)
+    }
+
+
+    func testOneClickRechecksActualClientInsteadOfStaleDisplayedStatus() async {
+        var client = true
+        var requests = 0
+        let monitor = NetworkMonitor(uuEnvironment: .init(
+            isInstalled: { true }, isClientRunning: { client },
+            isBackgroundRunning: { true }, open: { _ in requests += 1; client = true }
+        ))
+        XCTAssertEqual(monitor.uuStatus, .running)
+        client = false // Client quits before the panel receives a refresh.
+        monitor.launchUUIfNeeded()
+        await monitor.uuLaunchTask?.value
+        XCTAssertEqual(requests, 1)
+        XCTAssertEqual(monitor.uuStatus, .running)
+
+        client = false
+        monitor.refreshUUStatus()
+        XCTAssertEqual(monitor.uuStatus, .backgroundOnly)
+        client = true // Client starts while the panel still shows background-only.
+        monitor.launchUUIfNeeded()
+        XCTAssertEqual(requests, 1)
+        XCTAssertEqual(monitor.uuStatus, .running)
+    }
+
 }

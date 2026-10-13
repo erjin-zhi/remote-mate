@@ -34,6 +34,13 @@ open "/Applications/RemoteMate.app"
 ```
 需要 macOS 14+、Xcode 命令行工具。
 
+打包发布用 DMG（带拖动安装引导背景，输出到 `build/releases/<版本号>/`，并生成 `SHA256SUMS.txt`）：
+```bash
+./build.sh
+scripts/build-dmg.sh 1.0.1
+```
+打包时会短暂挂载并打开 DMG 窗口，用于写入 Finder 布局；版本号需与 `build.sh` 中的 `CFBundleShortVersionString` 保持一致。
+
 ## 图标与命名
 
 - App 图标采用浅薄荷绿底、白色显示器和黄色圆形状态灯，源图为 `Branding/RemoteMate/app-icon-light.png`。

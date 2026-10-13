@@ -24,6 +24,9 @@ struct HandCursorButton: NSViewRepresentable {
     var value: String
     var onHover: (Bool) -> Void
     var action: () -> Void
+    /// 鼠标在按钮内的归一化位置（左上角为 0,0），用于驱动跟随指针的视觉效果。
+    var onMove: ((CGPoint) -> Void)? = nil
+    var showsToolTip = true
 
     func makeNSView(context: Context) -> NativeButton {
         _ = BackgroundCursor.enable
@@ -40,8 +43,9 @@ struct HandCursorButton: NSViewRepresentable {
     func updateNSView(_ button: NativeButton, context: Context) {
         button.onPress = action
         button.onHover = onHover
+        button.onMove = onMove
         button.isEnabled = isEnabled
-        button.toolTip = label
+        button.toolTip = showsToolTip ? label : nil
         button.setAccessibilityLabel(label)
         button.setAccessibilityValue(value)
         button.window?.invalidateCursorRects(for: button)
@@ -50,6 +54,7 @@ struct HandCursorButton: NSViewRepresentable {
     final class NativeButton: NSButton {
         var onPress: (() -> Void)?
         var onHover: ((Bool) -> Void)?
+        var onMove: ((CGPoint) -> Void)?
         private var hoverTracking: NSTrackingArea?
 
         // 启动结束后按钮重新可用时鼠标往往停在原地，且 UU 被激活后本应用不再是活跃应用，
@@ -95,11 +100,21 @@ struct HandCursorButton: NSViewRepresentable {
         // 本应用非活跃时不会收到 cursorUpdate，用 mouseMoved 兜底（需配合 BackgroundCursor）。
         override func mouseMoved(with event: NSEvent) {
             (isEnabled ? NSCursor.pointingHand : NSCursor.arrow).set()
+            reportPosition(event)
         }
 
         override func mouseEntered(with event: NSEvent) {
             (isEnabled ? NSCursor.pointingHand : NSCursor.arrow).set()
             onHover?(true)
+            reportPosition(event)
+        }
+
+        private func reportPosition(_ event: NSEvent) {
+            guard let onMove, bounds.width > 0, bounds.height > 0 else { return }
+            let point = convert(event.locationInWindow, from: nil)
+            let y = isFlipped ? point.y : bounds.height - point.y
+            onMove(CGPoint(x: min(max(point.x / bounds.width, 0), 1),
+                           y: min(max(y / bounds.height, 0), 1)))
         }
 
         override func mouseExited(with event: NSEvent) {

@@ -84,9 +84,14 @@ struct PanelView: View {
         let state = controller.remoteState
         let tint: Color = state == .on ? .accentColor : (state == .partial ? .orange : .clear)
         return VStack(spacing: 6) {
-            Button {
-                controller.setRemoteMode(state == .off)
-            } label: {
+            GlareCard(
+                isEnabled: !sleep.lidBusy,
+                label: state == .off ? "开启远程模式" : "关闭远程模式",
+                value: remoteModeTitle(state),
+                fill: state == .off ? Color.primary.opacity(0.07) : tint,
+                highlight: state == .off ? 1 : 0.3,
+                action: { controller.setRemoteMode(state == .off) }
+            ) {
                 HStack(spacing: 10) {
                     Image(systemName: state == .off ? "power" : "power.circle.fill")
                         .font(.title2)
@@ -105,14 +110,7 @@ struct PanelView: View {
                 }
                 .padding(12)
                 .foregroundStyle(state == .off ? Color.primary : Color.white)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(state == .off ? Color.primary.opacity(0.07) : tint)
-                )
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .disabled(sleep.lidBusy)
 
             if state == .partial {
                 HStack {
@@ -521,6 +519,73 @@ struct Card<Accessory: View, Content: View>: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.05)))
+    }
+}
+
+/// 悬停时随指针轻微倾斜，并在指针处泛起高光和边缘反光，类似 App Store 卡片的立体效果。
+/// 点击与手型光标交给 HandCursorButton，它放在 3D 变换之外，保证点击区域不随倾斜偏移。
+struct GlareCard<Content: View>: View {
+    var isEnabled: Bool
+    var cornerRadius: CGFloat = 10
+    var label: String
+    var value: String
+    var fill: Color
+    /// 光效强度：彩色底配白字时要调低，避免高光把文字冲淡
+    var highlight: Double = 1
+    var action: () -> Void
+    @ViewBuilder var content: Content
+
+    @State private var hovering = false
+    @State private var pointer = CGPoint(x: 0.5, y: 0.5)
+
+    var body: some View {
+        let active = hovering && isEnabled
+        let center = UnitPoint(x: pointer.x, y: pointer.y)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        // 光效都画在内容下方，文字和按钮保持原色不被冲淡
+        content
+            .background {
+                ZStack {
+                    shape.fill(fill)
+                    // 整体提亮一层，像卡片被抬起；指针处再加一团柔和的白色高光
+                    shape.fill(Color.white.opacity(0.35 * highlight))
+                    shape.fill(RadialGradient(colors: [Color.white.opacity(0.6 * highlight), Color.white.opacity(0)],
+                                              center: center, startRadius: 0, endRadius: 160))
+                }
+                .opacity(active ? 1 : 0)
+                .background(shape.fill(fill))
+            }
+            .overlay(
+                shape.strokeBorder(RadialGradient(colors: [Color.white.opacity(0.9), Color.primary.opacity(0.06)],
+                                                  center: center, startRadius: 0, endRadius: 220),
+                                   lineWidth: 1)
+                    .opacity(active ? 1 : 0)
+            )
+            .clipShape(shape)
+            .opacity(isEnabled ? 1 : 0.6)
+            .rotation3DEffect(.degrees(active ? (0.5 - pointer.y) * 5 : 0),
+                              axis: (x: 1, y: 0, z: 0), perspective: 0.4)
+            .rotation3DEffect(.degrees(active ? (pointer.x - 0.5) * 4 : 0),
+                              axis: (x: 0, y: 1, z: 0), perspective: 0.4)
+            .shadow(color: .black.opacity(active ? 0.12 : 0), radius: active ? 8 : 0, y: active ? 3 : 0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: pointer)
+            .animation(.spring(response: 0.35, dampingFraction: 0.75), value: active)
+            .accessibilityHidden(true)
+            .overlay {
+                HandCursorButton(
+                    isEnabled: isEnabled,
+                    label: label,
+                    value: value,
+                    onHover: { inside in
+                        hovering = inside
+                        if !inside { pointer = CGPoint(x: 0.5, y: 0.5) }
+                    },
+                    action: action,
+                    onMove: { pointer = $0 },
+                    showsToolTip: false
+                )
+            }
+            .onDisappear { hovering = false }
     }
 }
 

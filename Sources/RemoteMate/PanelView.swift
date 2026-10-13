@@ -142,7 +142,7 @@ struct PanelView: View {
                     Text("代理 TUN").font(.caption2)
                         .padding(.horizontal, 5).padding(.vertical, 1)
                         .background(Capsule().fill(Color.secondary.opacity(0.15)))
-                        .help("默认路由由代理/VPN 虚拟网卡接管，外网与 UU 服务延迟为经代理后的结果")
+                        .help("默认路由由代理/VPN 虚拟网卡接管，外网与 UU 服务器延迟为经代理后的结果")
                 }
                 if network.isChecking {
                     ProgressView().controlSize(.mini)
@@ -160,40 +160,30 @@ struct PanelView: View {
             ProbeRow(title: "内网", probe: network.lan)
             ProbeRow(title: "外网", probe: network.wan)
             if network.isUUInstalled {
-                ProbeRow(title: "UU 服务", probe: network.uuService)
+                ProbeRow(title: "UU 服务器", probe: network.uuService)
                 uuApplicationRow
             }
         }
     }
 
     private var uuApplicationRow: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
-                StatusDot(level: uuLevel)
-                Text("UU 远程").font(.callout)
-                Spacer()
-                Text(network.isLaunchingUU ? "启动中…" : uuText)
-                    .font(.callout.monospacedDigit())
-                    .fontWeight(uuNeedsLaunch ? .semibold : .regular)
-                    .foregroundStyle(uuNeedsLaunch ? Color.red : Color.secondary)
-                if network.uuStatus == .running {
-                    Image(systemName: "arrow.up.forward")
-                        .font(.caption).foregroundStyle(.secondary)
-                } else {
-                    Text("打开")
-                        .font(.caption)
-                        .foregroundStyle(network.isLaunchingUU ? Color.secondary : Color.accentColor)
-                        .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(RoundedRectangle(cornerRadius: 5)
-                            .fill(Color.accentColor.opacity(0.12)))
-                }
-            }
-            if uuNeedsLaunch {
-                Text(uuLaunchHint)
+        HStack(spacing: 8) {
+            StatusDot(level: uuLevel)
+            Text("UU 远程").font(.callout)
+            Spacer()
+            Text(network.isLaunchingUU ? "启动中…" : uuText)
+                .font(.callout.monospacedDigit())
+                .foregroundStyle(uuNeedsLaunch ? Color.red : Color.secondary)
+            if network.uuStatus == .running {
+                Image(systemName: "arrow.up.forward")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text("打开")
                     .font(.caption)
-                    .foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, 16)
+                    .foregroundStyle(network.isLaunchingUU ? Color.secondary : Color.accentColor)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(RoundedRectangle(cornerRadius: 5)
+                        .fill(Color.accentColor.opacity(0.12)))
             }
         }
         .padding(.vertical, 5)
@@ -204,7 +194,7 @@ struct PanelView: View {
             HandCursorButton(
                 isEnabled: !network.isLaunchingUU,
                 label: network.uuStatus == .running ? "切换到 UU 远程" : "打开 UU 远程",
-                value: network.isLaunchingUU ? "启动中" : (uuNeedsLaunch ? "\(uuText)，\(uuLaunchHint)" : uuText),
+                value: network.isLaunchingUU ? "启动中" : uuText,
                 onHover: { hoveringUU = $0 },
                 action: { network.openUU(activate: true) }
             )
@@ -214,12 +204,6 @@ struct PanelView: View {
 
     private var uuNeedsLaunch: Bool {
         network.uuStatus.canLaunch && !network.isLaunchingUU
-    }
-
-    private var uuLaunchHint: String {
-        network.uuStatus == .backgroundOnly
-            ? "仅后台服务运行，请先打开 UU 远程"
-            : "请先打开 UU 远程以使用远程控制"
     }
 
     private var uuLevel: NetworkMonitor.Level {
@@ -232,7 +216,7 @@ struct PanelView: View {
     private var uuText: String {
         switch network.uuStatus {
         case .running: return "主程序运行中"
-        case .backgroundOnly, .installedNotRunning: return "主程序未启动"
+        case .backgroundOnly, .installedNotRunning: return "未启动"
         case .notInstalled: return "未安装"
         }
     }

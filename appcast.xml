@@ -1,1 +1,21 @@
-<?xml version="1.0" encoding="utf-8"?><rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"><channel><title>RemoteMate</title></channel></rss>
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>RemoteMate</title>
+        <item>
+            <title>1.1.0</title>
+            <pubDate>Tue, 13 Oct 2026 15:50:57 +0800</pubDate>
+            <sparkle:version>3</sparkle:version>
+            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## 新增
+
+- **检查更新**：运行期间每天自动检查一次新版本，发现后由你选择是否安装，确认后自动下载、安装并重启。也可在「偏好设置」中点击「检查更新…」手动检查，或关闭自动检查。
+
+> 从 1.0.x 升级需要手动安装一次本版本，之后即可在应用内更新。
+]]></description>
+            <enclosure url="https://github.com/erjin-zhi/remote-mate/releases/download/v1.1.0/RemoteMate-1.1.0-macOS-arm64.dmg" length="2932013" type="application/octet-stream" sparkle:edSignature="yPaUQCX861Fd89Sen/mHLkTnspJV+Tnpm4vtKB2aufw/z59eRDrcCxGwQtmYdmZTIxQN4P2Q55xdSFkBW258Aw=="/>
+        </item>
+    </channel>
+</rss>

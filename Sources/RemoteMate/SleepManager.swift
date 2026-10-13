@@ -14,8 +14,7 @@ final class SleepManager: ObservableObject {
         static let ownsLid = "sleep.ownsLidSetting"
     }
 
-    // 沿用旧版授权文件位置，改名后仍可识别和撤销已有免密码授权。
-    private static let sudoersPath = "/etc/sudoers.d/rmt-pilot"
+    private static let sudoersPath = "/etc/sudoers.d/remote-mate"
 
     @Published var preventOnAC: Bool {
         didSet { UserDefaults.standard.set(preventOnAC, forKey: Keys.ac); updateAssertions(); reconcileLid() }

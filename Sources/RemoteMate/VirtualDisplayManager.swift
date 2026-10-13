@@ -102,7 +102,7 @@ final class VirtualDisplayManager: ObservableObject {
         // 按约 96 PPI 估算物理尺寸，让系统给出合理的默认缩放
         descriptor.sizeInMillimeters = CGSize(width: Double(width) / 96 * 25.4, height: Double(height) / 96 * 25.4)
         // 固定的厂商/序列号让 macOS 记住该屏幕的排列位置
-        descriptor.vendorID = 0x5250
+        descriptor.vendorID = 0x524D
         descriptor.productID = 0x0001
         descriptor.serialNum = 0x0001
         descriptor.terminationHandler = { [weak self] _, _ in

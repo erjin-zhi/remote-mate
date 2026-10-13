@@ -4,8 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 APP_NAME="RemoteMate"
-# 保留已发布版本的标识，沿用偏好设置和登录项身份。
-BUNDLE_ID="com.rmtpilot.app"
+BUNDLE_ID="com.remotemate.app"
 APP="build/${APP_NAME}.app"
 
 swift build -c release
@@ -13,9 +12,9 @@ BIN="$(swift build -c release --show-bin-path)/RemoteMate"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/RemoteMate"
-cp "Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
-cp -R Resources/en.lproj Resources/zh-Hans.lproj "$APP/Contents/Resources/"
+cp -X "$BIN" "$APP/Contents/MacOS/RemoteMate"
+cp -X "Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+cp -X -R Resources/en.lproj Resources/zh-Hans.lproj "$APP/Contents/Resources/"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -40,6 +39,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
+# 移除编译器留下的本机源码路径和调试符号，再对最终二进制签名。
+strip -S "$APP/Contents/MacOS/RemoteMate"
 codesign --force --deep --sign - "$APP"
 echo "✅ 已生成: $APP"
 echo "   安装: cp -R \"$APP\" /Applications/"

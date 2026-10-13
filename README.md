@@ -17,7 +17,7 @@ RemoteMate（中文名：远程伴侣）是一款 macOS 菜单栏工具，提供
 - **保持屏幕常亮**：防止远程画面因显示器休眠而黑屏
 - **合盖不休眠**：`pmset -a disablesleep 1`，跟随供电生效——接电源时需开启「接通电源时不休眠」，
   用电池时需开启「使用电池时不休眠」，插拔电源自动切换。需要管理员权限；可一次性「免密码授权」
-  （在 `/etc/sudoers.d/rmt-pilot` 写入只允许 `pmset -a disablesleep 0/1` 的规则，可随时撤销）
+  （在 `/etc/sudoers.d/remote-mate` 写入只允许 `pmset -a disablesleep 0/1` 的规则，可随时撤销）
 - **网络状况**：内网（ping 网关）、外网（ping 223.5.5.5）、UU 服务（HTTPS `api.nrd.nie.163.com`）延迟，
   以及 UU 远程运行状态；ping 绑定物理网卡，绕开代理 TUN
 - **一键开启时自动启动 UU 远程**（可在偏好设置关闭；一键关闭不会退出 UU）
@@ -38,12 +38,6 @@ open "/Applications/RemoteMate.app"
 - `Resources/AppIcon.icns` 包含 macOS 所需的多尺寸图标，构建时自动写入 App Bundle，供 Finder 和 DMG 中的应用文件显示。
 - 菜单栏使用单色显示器与状态灯：空心表示防休眠和虚拟屏幕均未生效，实心表示至少一项正在生效；它不表示远程会话是否已连接。
 - 更新源图后，运行 `./scripts/build-icon.sh` 重新生成 ICNS，然后执行 `./build.sh`。
-
-## 旧版兼容
-
-项目已从 Rmt Pilot 改名为 RemoteMate · 远程伴侣。为继续读取原有偏好设置和识别旧版授权，Bundle ID 仍为 `com.rmtpilot.app`，免密码授权文件仍为 `/etc/sudoers.d/rmt-pilot`，虚拟显示器的硬件标识保持不变。
-
-从旧版升级时，先退出旧 App，再安装并启动 `RemoteMate.app`，避免同时运行两份。若原来启用了登录时启动，升级后请在偏好设置中重新关闭、开启一次，确认登录项指向新的 App 路径。
 
 ## 注意
 - 合盖不休眠生效时会禁用系统所有休眠；用电池时若开启了「使用电池时不休眠」，装进包里前请关闭，避免过热和耗电。

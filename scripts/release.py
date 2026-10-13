@@ -211,4 +211,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except (RuntimeError, subprocess.CalledProcessError) as error:
+        raise SystemExit(f'❌ {error}')

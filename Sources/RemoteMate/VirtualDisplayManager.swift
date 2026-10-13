@@ -96,7 +96,7 @@ final class VirtualDisplayManager: ObservableObject {
         let scale = hiDPI ? 2 : 1
         let descriptor = CGVirtualDisplayDescriptor()
         descriptor.setDispatchQueue(DispatchQueue.main)
-        descriptor.name = "Rmt Pilot Display"
+        descriptor.name = "RemoteMate Display"
         descriptor.maxPixelsWide = UInt32(width * scale)
         descriptor.maxPixelsHigh = UInt32(height * scale)
         // 按约 96 PPI 估算物理尺寸，让系统给出合理的默认缩放

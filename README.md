@@ -1,6 +1,15 @@
-# Rmt Pilot
+# RemoteMate · 远程伴侣
 
-macOS 菜单栏远程伴侣：一键防休眠 + 虚拟屏幕，方便用远程桌面软件连接这台 Mac。
+**为远程连接，一键准备好你的 Mac。**
+
+<img src="Branding/RemoteMate/app-icon-light.png" width="160" alt="RemoteMate 远程伴侣 App 图标">
+
+RemoteMate（中文名：远程伴侣）是一款 macOS 菜单栏工具，提供一键防休眠、虚拟屏幕、网络检查和 UU 远程联动，方便用远程桌面软件连接这台 Mac。
+
+- 英文名：**RemoteMate**
+- 中文名：**远程伴侣**
+- 项目目录：`remote-mate`
+- App 文件名：`RemoteMate.app`；支持英文、简体中文应用显示名称。
 
 ## 功能
 - **一键远程模式**：同时开启下面勾选的各项（在「偏好设置」中选择包含哪些）
@@ -18,9 +27,23 @@ macOS 菜单栏远程伴侣：一键防休眠 + 虚拟屏幕，方便用远程�
 ## 构建
 ```bash
 ./build.sh
-cp -R "build/Rmt Pilot.app" /Applications/
+cp -R "build/RemoteMate.app" /Applications/
+open "/Applications/RemoteMate.app"
 ```
 需要 macOS 14+、Xcode 命令行工具。
+
+## 图标与命名
+
+- App 图标采用浅薄荷绿底、白色显示器和黄色圆形状态灯，源图为 `Branding/RemoteMate/app-icon-light.png`。
+- `Resources/AppIcon.icns` 包含 macOS 所需的多尺寸图标，构建时自动写入 App Bundle，供 Finder 和 DMG 中的应用文件显示。
+- 菜单栏使用单色显示器与状态灯：空心表示防休眠和虚拟屏幕均未生效，实心表示至少一项正在生效；它不表示远程会话是否已连接。
+- 更新源图后，运行 `./scripts/build-icon.sh` 重新生成 ICNS，然后执行 `./build.sh`。
+
+## 旧版兼容
+
+项目已从 Rmt Pilot 改名为 RemoteMate · 远程伴侣。为继续读取原有偏好设置和识别旧版授权，Bundle ID 仍为 `com.rmtpilot.app`，免密码授权文件仍为 `/etc/sudoers.d/rmt-pilot`，虚拟显示器的硬件标识保持不变。
+
+从旧版升级时，先退出旧 App，再安装并启动 `RemoteMate.app`，避免同时运行两份。若原来启用了登录时启动，升级后请在偏好设置中重新关闭、开启一次，确认登录项指向新的 App 路径。
 
 ## 注意
 - 合盖不休眠生效时会禁用系统所有休眠；用电池时若开启了「使用电池时不休眠」，装进包里前请关闭，避免过热和耗电。

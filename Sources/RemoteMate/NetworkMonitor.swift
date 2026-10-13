@@ -38,7 +38,7 @@ final class NetworkMonitor: ObservableObject {
         pathMonitor.pathUpdateHandler = { [weak self] path in
             DispatchQueue.main.async { self?.update(path: path) }
         }
-        pathMonitor.start(queue: DispatchQueue(label: "rmtpilot.path"))
+        pathMonitor.start(queue: DispatchQueue(label: "remotemate.path"))
         refreshUUStatus()
     }
 

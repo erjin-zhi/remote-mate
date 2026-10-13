@@ -55,7 +55,7 @@ struct PanelView: View {
 
     private var header: some View {
         HStack {
-            Text("Rmt Pilot").font(.title3.bold())
+            Text("远程伴侣").font(.title3.bold())
             Spacer()
             HStack(spacing: 10) {
                 Label(network.interfaceText, systemImage: network.isOnline ? "wifi" : "wifi.slash")
@@ -424,7 +424,7 @@ struct PanelView: View {
                 }
                 Toggle("UU 远程未运行时自动启动", isOn: $prefs.launchUU)
                 Divider()
-                Toggle("登录时启动 Rmt Pilot", isOn: Binding(
+                Toggle("登录时启动远程伴侣", isOn: Binding(
                     get: { prefs.launchAtLogin },
                     set: { prefs.setLaunchAtLogin($0) }
                 ))

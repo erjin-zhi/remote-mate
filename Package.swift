@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "RmtPilot",
+    name: "RemoteMate",
     platforms: [.macOS(.v14)],
     targets: [
         // 私有 API CGVirtualDisplay 的 Objective-C 声明（实现位于系统 CoreGraphics 框架内）
@@ -12,9 +12,9 @@ let package = Package(
             linkerSettings: [.linkedFramework("CoreGraphics")]
         ),
         .executableTarget(
-            name: "RmtPilot",
+            name: "RemoteMate",
             dependencies: ["CGVirtualDisplayPrivate"],
-            path: "Sources/RmtPilot",
+            path: "Sources/RemoteMate",
             linkerSettings: [
                 .linkedFramework("IOKit"),
                 .linkedFramework("ServiceManagement"),

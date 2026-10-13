@@ -1,0 +1,40 @@
+RemoteMate / 远程伴侣 — 设计提案
+
+内置 image_gen 生成 App 图标。三种新方向：活力贴纸、软萌黏土、几何纸雕。
+项目定位：macOS 远程使用辅助工具，按供电保持清醒、支持合盖运行和虚拟屏幕，并检测网络、联动 UU 远程。
+命名含义：Remote 表示远程使用，Mate 表示搭档、伴侣。为远程连接，一键准备好你的 Mac。
+
+菜单栏已接入固定显示器轮廓＋状态灯：未生效为空心，任意本机功能实际生效为实心。
+判断条件：isPreventingIdleSleep || lidSleepDisabled || display.isActive。
+这不代表远程会话连接状态。提示和辅助功能标签列出具体生效功能。
+20×18 pt，单色 Template 图像，系统自动适配菜单栏外观。
+感叹号和电源符号保留为素材备选，本次未接入。历史 lastError 未清除前不适合直接驱动异常图标。
+已确定名称 RemoteMate / 远程伴侣；正式 App 图标采用 app-icon-light.png（浅薄荷绿底、白色显示器、屏幕中央黄色圆灯），其余为未采用的设计稿。下方提示词名称已按最终品牌更新。
+
+浅色版提示词：
+Use case: style-transfer
+Asset type: macOS app icon for RemoteMate / 远程伴侣, lively light color revision.
+Edit the supplied app icon. Preserve the core idea of a centered desktop monitor with a warm round beacon inside and a rounded-square macOS tile. Completely replace the dark, mysterious ocean look with a light, fresh, cheerful modern utility icon.
+Color palette: pale mint and fresh light turquoise tile, soft sky blue screen interior, warm apricot-yellow circular beacon, clean white or very pale cream monitor body. No navy, no deep blue, no black screen, no purple.
+Style: much flatter and cleaner, friendly crisp simple geometry, restrained satin depth with only very soft short shadows, bright daylight feeling, not glowing in darkness. The screen should feel luminous and airy. A single small curved light-cyan horizon line under the warm yellow beacon is enough. Remove all background waves and remove the layered reflections, remove dramatic glow, remove thick heavy beveling and glossy blue edge. No atmosphere or scenery. Keep strong silhouette and sufficient contrast against the mint tile so the monitor reads at 32px.
+Composition: exactly one large square app icon, straight-on view, centered rounded-square tile within transparent outer padding, centered bold desktop monitor silhouette including short stand. Output square image. No text, letters, numbers, watermark, presentation board, alternate versions or surrounding UI.
+Preserve true alpha transparency outside the tile.
+
+sticker 提示词：
+Use case: logo-brand
+Asset type: standalone macOS app icon, energetic graphic sticker direction for RemoteMate, a utility that keeps a Mac awake for remote use and creates virtual screens.
+Create one exceptionally designed, playful contemporary flat vector-like app icon. A sky-blue rounded-square tile holds a boldly tilted cream laptop with its lid open, outlined with thick deep cobalt strokes. A lively apricot-yellow rising sun peeks up from inside the screen; the sun is a clean circle with just three chunky short rays, no face. The laptop leans about 10 degrees and has a short bold offset cobalt graphic shadow for buoyant motion. Two tiny cream geometric spark shapes balance the composition. Make the laptop large, iconically simple, with only essential screen and keyboard-base shapes.
+Style: premium bold editorial sticker art, expressive imperfect-but-controlled rounded geometry, crisp flat colors, screenprinted charm, high energy, not corporate clip art. Big shapes and generous negative space. Colors: periwinkle sky blue, warm cream, vivid cobalt outlines, juicy apricot yellow. No gradients, no glossy bevel, no realistic lighting, no detailed keys, no text, no letters, no watermark, no Wi-Fi symbol, no moon.
+Single square image 1024x1024; centered rounded-square tile occupying about 84% of canvas, fully visible with genuine transparent outer padding. One icon only, no contact sheet or presentation mockup. Silhouette must read at 32 pixels.
+
+clay 提示词：
+Use case: stylized-concept
+Asset type: standalone macOS app icon, friendly clay mascot direction for RemoteMate, a menu-bar helper keeping a Mac awake and providing virtual screens.
+Create one charming, energetic premium 3D clay app icon. Main character is a chunky soft rounded desktop monitor, as a cheerful little desk companion. Monitor body is light turquoise soft sculpted clay, short sturdy stand, pale creamy screen. Two tiny dark teal oval eyes and a simple curved smile inside screen give an alert friendly expression. One oversized rounded apricot-yellow antenna bulb sits centered on its top edge, like a friendly awake-status lamp. It has NO hands, NO legs, NO keyboard, NO words. Slight jaunty three-quarter tilt, readable front face, fresh bright daylight. Minimal soft clay surface with restrained handmade tactile character, smooth large shapes, elegant soft short shadows. A warm pale buttery-yellow rounded-square tile behind it, allowing the mint character to stand out. Keep it confident and delightful, not a toy product photo.
+Composition: character fills most of tile with generous breathing room, single centered app icon, square 1024x1024 image. Tile about 84% canvas width with true transparent outer padding. No scenery, no desk, no decorative tiny floating particles, no text, no letters, no watermark, no moon, no wifi symbol, no neon. No dark navy background. Strong unique silhouette readable at 32px.
+
+papercut 提示词：
+Use case: logo-brand
+Asset type: standalone macOS app icon, kinetic geometric paper-sculpture direction for RemoteMate, a remote-work readiness utility with virtual displays.
+Design one fresh, high-energy sophisticated app icon built from folded matte colored paper shapes. On a very pale cool aqua rounded-square tile, two large rounded rectangular display cards are offset diagonally, one bright ultramarine screen in front at lower left, one vibrant coral-orange screen behind at upper right. Front screen has thick warm white paper frame and a short folded white desktop stand at its bottom. The back screen has no stand and is clearly a secondary virtual screen. In the upper right of the front screen, one large buttery-yellow circular status lamp as a raised paper disk. Geometry has a gentle consistent 10 degree playful tilt and restrained shallow layered cut-paper shadows; bright airy daylight. A single broad mint folded strip sweeping behind the two displays suggests connection, without arrows or wires. Large simple geometric silhouettes and confident asymmetry, joyful movement, crisp cut edges. Premium design-studio craft, NOT stock 3D render, NOT glassmorphism.
+Single icon, no scene, no literal harbor, no text, no letters, no logo initials, no watermark, no Wi-Fi arcs, no moon, no glow, no gradients. Square 1024x1024 image. Centered tile about 84% canvas width with true transparent outer padding. Whole tile and all objects inside safe boundaries; no clipping. Must read clearly at small sizes.

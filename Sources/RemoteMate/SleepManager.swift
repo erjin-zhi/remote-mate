@@ -14,6 +14,7 @@ final class SleepManager: ObservableObject {
         static let ownsLid = "sleep.ownsLidSetting"
     }
 
+    // 沿用旧版授权文件位置，改名后仍可识别和撤销已有免密码授权。
     private static let sudoersPath = "/etc/sudoers.d/rmt-pilot"
 
     @Published var preventOnAC: Bool {
@@ -85,7 +86,7 @@ final class SleepManager: ObservableObject {
             let result = IOPMAssertionCreateWithName(
                 type as CFString,
                 IOPMAssertionLevel(kIOPMAssertionLevelOn),
-                "Rmt Pilot remote session" as CFString,
+                "RemoteMate remote session" as CFString,
                 &newID
             )
             if result == kIOReturnSuccess {

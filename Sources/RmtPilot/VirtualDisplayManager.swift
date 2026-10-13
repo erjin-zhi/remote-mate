@@ -1,0 +1,239 @@
+import AppKit
+import CGVirtualDisplayPrivate
+import CoreGraphics
+
+struct Resolution: Hashable, Identifiable {
+    let width: Int
+    let height: Int
+
+    var id: String { "\(width)x\(height)" }
+    var label: String { "\(width) × \(height)" }
+
+    static let presets: [Resolution] = [
+        .init(width: 1280, height: 720),
+        .init(width: 1280, height: 800),
+        .init(width: 1366, height: 768),
+        .init(width: 1440, height: 900),
+        .init(width: 1600, height: 900),
+        .init(width: 1680, height: 1050),
+        .init(width: 1920, height: 1080),
+        .init(width: 1920, height: 1200),
+        .init(width: 2048, height: 1536),
+        .init(width: 2560, height: 1440),
+        .init(width: 2560, height: 1600),
+        .init(width: 3440, height: 1440),
+        .init(width: 3840, height: 2160),
+    ]
+
+    static let widthRange = 640...7680
+    static let heightRange = 480...4320
+}
+
+@MainActor
+final class VirtualDisplayManager: ObservableObject {
+    private enum Keys {
+        static let width = "display.width"
+        static let height = "display.height"
+        static let refreshRate = "display.refreshRate"
+        static let hiDPI = "display.hiDPI"
+        static let makeMain = "display.makeMain"
+    }
+
+    @Published private(set) var width: Int
+    @Published private(set) var height: Int
+    @Published var refreshRate: Double {
+        didSet { UserDefaults.standard.set(refreshRate, forKey: Keys.refreshRate); applyIfActive() }
+    }
+    @Published var hiDPI: Bool {
+        didSet { UserDefaults.standard.set(hiDPI, forKey: Keys.hiDPI); applyIfActive() }
+    }
+    @Published var makeMainOnStart: Bool {
+        didSet { UserDefaults.standard.set(makeMainOnStart, forKey: Keys.makeMain) }
+    }
+
+    @Published private(set) var isActive = false
+    @Published private(set) var displayID: CGDirectDisplayID = 0
+    @Published private(set) var currentModeText = ""
+    @Published var lastError: String?
+
+    private var display: CGVirtualDisplay?
+    private var appliedHiDPI = false
+    private var maxWidth = 0
+    private var maxHeight = 0
+
+    init() {
+        let defaults = UserDefaults.standard
+        width = defaults.integer(forKey: Keys.width)
+        height = defaults.integer(forKey: Keys.height)
+        refreshRate = defaults.double(forKey: Keys.refreshRate)
+        hiDPI = defaults.bool(forKey: Keys.hiDPI)
+        makeMainOnStart = defaults.bool(forKey: Keys.makeMain)
+    }
+
+    var resolution: Resolution { Resolution(width: width, height: height) }
+
+    func setEnabled(_ enabled: Bool) {
+        enabled ? start() : stop()
+    }
+
+    func setResolution(width: Int, height: Int) {
+        guard Resolution.widthRange.contains(width), Resolution.heightRange.contains(height) else {
+            lastError = "分辨率需在 \(Resolution.widthRange.lowerBound)×\(Resolution.heightRange.lowerBound) 到 \(Resolution.widthRange.upperBound)×\(Resolution.heightRange.upperBound) 之间"
+            return
+        }
+        guard width != self.width || height != self.height else { return }
+        self.width = width
+        self.height = height
+        UserDefaults.standard.set(width, forKey: Keys.width)
+        UserDefaults.standard.set(height, forKey: Keys.height)
+        applyIfActive()
+    }
+
+    // MARK: - 生命周期
+
+    func start() {
+        guard display == nil else { return }
+        let scale = hiDPI ? 2 : 1
+        let descriptor = CGVirtualDisplayDescriptor()
+        descriptor.setDispatchQueue(DispatchQueue.main)
+        descriptor.name = "Rmt Pilot Display"
+        descriptor.maxPixelsWide = UInt32(width * scale)
+        descriptor.maxPixelsHigh = UInt32(height * scale)
+        // 按约 96 PPI 估算物理尺寸，让系统给出合理的默认缩放
+        descriptor.sizeInMillimeters = CGSize(width: Double(width) / 96 * 25.4, height: Double(height) / 96 * 25.4)
+        // 固定的厂商/序列号让 macOS 记住该屏幕的排列位置
+        descriptor.vendorID = 0x5250
+        descriptor.productID = 0x0001
+        descriptor.serialNum = 0x0001
+        descriptor.terminationHandler = { [weak self] _, _ in
+            DispatchQueue.main.async { self?.handleTermination() }
+        }
+
+        guard let newDisplay = CGVirtualDisplay(descriptor: descriptor) else {
+            lastError = "创建虚拟屏幕失败"
+            return
+        }
+        display = newDisplay
+        appliedHiDPI = hiDPI
+        maxWidth = width
+        maxHeight = height
+
+        guard applyModes(to: newDisplay) else {
+            display = nil
+            lastError = "虚拟屏幕不接受当前分辨率设置"
+            return
+        }
+        isActive = true
+        displayID = newDisplay.displayID
+
+        // 新屏幕需要片刻才会出现在显示器列表里
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            guard let self, self.isActive else { return }
+            self.selectCurrentMode()
+            if self.makeMainOnStart { self.makeMain() }
+            self.refreshModeText()
+        }
+    }
+
+    func stop() {
+        display = nil  // 释放对象即移除虚拟屏幕
+        isActive = false
+        displayID = 0
+        currentModeText = ""
+    }
+
+    private func handleTermination() {
+        guard isActive else { return }
+        stop()
+        lastError = "虚拟屏幕已被系统移除"
+    }
+
+    // MARK: - 模式
+
+    private func applyIfActive() {
+        guard let display else { return }
+        if hiDPI == appliedHiDPI, width <= maxWidth, height <= maxHeight, applyModes(to: display) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                self?.selectCurrentMode()
+                self?.refreshModeText()
+            }
+        } else {
+            // 超出最大像素或切换 HiDPI 时需要重建屏幕
+            stop()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.start() }
+        }
+    }
+
+    /// 当前分辨率放在首位，其余为不超过最大像素的预设，方便在系统设置里切换。
+    private func modeList() -> [Resolution] {
+        let selected = resolution
+        let others = Resolution.presets.filter {
+            $0 != selected && $0.width <= maxWidth && $0.height <= maxHeight
+        }
+        return [selected] + others.reversed()
+    }
+
+    private func applyModes(to display: CGVirtualDisplay) -> Bool {
+        let settings = CGVirtualDisplaySettings()
+        settings.hiDPI = appliedHiDPI ? 1 : 0
+        settings.modes = modeList().map {
+            CGVirtualDisplayMode(width: UInt32($0.width), height: UInt32($0.height), refreshRate: refreshRate)
+        }
+        return display.apply(settings)
+    }
+
+    private func selectCurrentMode() {
+        guard displayID != 0 else { return }
+        let options = [kCGDisplayShowDuplicateLowResolutionModes: kCFBooleanTrue] as CFDictionary
+        guard let modes = CGDisplayCopyAllDisplayModes(displayID, options) as? [CGDisplayMode] else { return }
+        let pixelWidth = width * (appliedHiDPI ? 2 : 1)
+        let candidates = modes.filter { $0.width == width && $0.height == height }
+        guard let target = candidates.first(where: { $0.pixelWidth == pixelWidth && abs($0.refreshRate - refreshRate) < 1 })
+            ?? candidates.first(where: { $0.pixelWidth == pixelWidth })
+            ?? candidates.first else { return }
+
+        if let current = CGDisplayCopyDisplayMode(displayID),
+           current.width == target.width, current.height == target.height,
+           current.pixelWidth == target.pixelWidth, current.refreshRate == target.refreshRate {
+            return
+        }
+        var config: CGDisplayConfigRef?
+        guard CGBeginDisplayConfiguration(&config) == .success else { return }
+        CGConfigureDisplayWithDisplayMode(config, displayID, target, nil)
+        CGCompleteDisplayConfiguration(config, .permanently)
+    }
+
+    /// 平移所有屏幕坐标，使虚拟屏幕位于原点，即成为主显示器（菜单栏和程序坞所在）。
+    func makeMain() {
+        guard displayID != 0, CGMainDisplayID() != displayID else { return }
+        var count: UInt32 = 0
+        CGGetActiveDisplayList(0, nil, &count)
+        var ids = [CGDirectDisplayID](repeating: 0, count: Int(count))
+        CGGetActiveDisplayList(count, &ids, &count)
+
+        let origin = CGDisplayBounds(displayID).origin
+        var config: CGDisplayConfigRef?
+        guard CGBeginDisplayConfiguration(&config) == .success else { return }
+        for id in ids {
+            let bounds = CGDisplayBounds(id)
+            CGConfigureDisplayOrigin(config, id, Int32(bounds.minX - origin.x), Int32(bounds.minY - origin.y))
+        }
+        if CGCompleteDisplayConfiguration(config, .permanently) != .success {
+            lastError = "设置主显示器失败"
+        }
+    }
+
+    var isMain: Bool { displayID != 0 && CGMainDisplayID() == displayID }
+
+    func refreshModeText() {
+        guard displayID != 0, let mode = CGDisplayCopyDisplayMode(displayID) else {
+            currentModeText = ""
+            return
+        }
+        var text = "\(mode.width)×\(mode.height) @\(Int(mode.refreshRate.rounded()))Hz"
+        if mode.pixelWidth > mode.width {
+            text += " · HiDPI \(mode.pixelWidth)×\(mode.pixelHeight)"
+        }
+        currentModeText = text
+    }
+}

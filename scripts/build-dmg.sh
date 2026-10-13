@@ -20,7 +20,7 @@ tiffutil -cathidpicheck "$WORK/bg.png" "$WORK/bg@2x.png" -out "$WORK/background.
 
 STAGE="$WORK/stage"
 mkdir -p "$STAGE/.background"
-ditto "$APP" "$STAGE/RemoteMate.app"
+ditto --norsrc --noextattr "$APP" "$STAGE/RemoteMate.app"
 ln -s /Applications "$STAGE/Applications"
 cp "$WORK/background.tiff" "$STAGE/.background/background.tiff"
 

@@ -8,6 +8,7 @@ final class AppController {
     let sleep: SleepManager
     let display: VirtualDisplayManager
     let network: NetworkMonitor
+    let updates = UpdateService()
 
     private init() {
         Preferences.registerDefaults()
@@ -40,6 +41,7 @@ final class AppController {
     }
 
     func didFinishLaunching() {
+        updates.start()
         if prefs.autoStartRemote { setRemoteMode(true) }
     }
 

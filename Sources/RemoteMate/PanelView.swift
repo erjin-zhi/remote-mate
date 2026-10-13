@@ -5,6 +5,7 @@ struct PanelView: View {
     @EnvironmentObject private var sleep: SleepManager
     @EnvironmentObject private var display: VirtualDisplayManager
     @EnvironmentObject private var network: NetworkMonitor
+    @EnvironmentObject private var updates: UpdateService
 
     @State private var customWidth = ""
     @State private var customHeight = ""
@@ -466,6 +467,20 @@ struct PanelView: View {
                 ))
                 Toggle("启动后自动开启远程模式", isOn: $prefs.autoStartRemote)
                 Toggle("退出时恢复合盖休眠", isOn: $prefs.restoreOnQuit)
+                if updates.isAvailable {
+                    Divider()
+                    HStack {
+                        Toggle("自动检查更新", isOn: Binding(
+                            get: { updates.automaticallyChecks },
+                            set: { updates.setAutomaticallyChecks($0) }
+                        ))
+                        Spacer()
+                        Text("版本 \(updates.currentVersion)").font(.caption).foregroundStyle(.secondary)
+                        Button("检查更新…") { updates.check() }
+                            .controlSize(.small)
+                            .disabled(!updates.canCheck)
+                    }
+                }
             }
             .toggleStyle(.checkbox)
             .padding(.top, 6)

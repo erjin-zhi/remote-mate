@@ -25,6 +25,7 @@ RemoteMate（中文名：远程伴侣）是一款 macOS 菜单栏工具，提供
 - 「UU 远程」整行悬停显示手型：未启动（包括仅后台服务运行）时显示「打开」按钮；主程序已运行时显示跳转箭头，点击切换到前台。未启动时显示红灯与红色「未启动」，避免将后台服务误认为主程序已运行。
 - **虚拟屏幕**：基于 CoreGraphics 私有 API `CGVirtualDisplay`，支持预设/自定义分辨率、30/60/120Hz、HiDPI、设为主显示器
 - 登录时启动、启动后自动开启远程模式、退出时恢复合盖休眠
+- **检查更新**：基于 Sparkle，读取 GitHub 上的更新清单，每天自动检查一次，也可在偏好设置中手动检查；确认后自动下载安装并重启（见 [Updates/README.md](Updates/README.md)）
 
 ## 构建
 ```bash
@@ -37,9 +38,11 @@ open "/Applications/RemoteMate.app"
 打包发布用 DMG（带拖动安装引导背景，输出到 `build/releases/<版本号>/`，并生成 `SHA256SUMS.txt`）：
 ```bash
 ./build.sh
-scripts/build-dmg.sh 1.0.1
+scripts/build-dmg.sh 1.1.0
 ```
-打包时会短暂挂载并打开 DMG 窗口，用于写入 Finder 布局；版本号需与 `build.sh` 中的 `CFBundleShortVersionString` 保持一致。
+打包时会短暂挂载并打开 DMG 窗口，用于写入 Finder 布局；版本号需与 `Updates/config.json` 中的 `version` 保持一致。
+
+正式发版（GitHub Release + 应用内更新）用 `python3 scripts/release.py --publish`，步骤见 [Updates/README.md](Updates/README.md)。
 
 ## 图标与命名
 

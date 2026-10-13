@@ -1,0 +1,10 @@
+{
+  "version": "1.1.0",
+  "build": "3",
+  "minimumSystemVersion": "14.0",
+  "feedURL": "https://raw.githubusercontent.com/erjin-zhi/remote-mate/updates/appcast.xml",
+  "repository": "erjin-zhi/remote-mate",
+  "feedBranch": "updates",
+  "keychainAccount": "com.remotemate.app.sparkle",
+  "publicKey": "LJJ/Qexo2ARx/maE7dxGo7kD2XFM7f+h/U9HXEYq8ZY="
+}

@@ -81,6 +81,8 @@ final class VirtualDisplayManager: ObservableObject {
     }
 
     @Published private(set) var isActive = false
+    /// 改分辨率或 HiDPI 时会先移除屏幕再重建，期间 `isActive` 短暂为假，但不代表用户关闭了它。
+    @Published private(set) var isRebuilding = false
     @Published private(set) var displayID: CGDirectDisplayID = 0
     @Published private(set) var currentModeText = ""
     @Published var lastError: String?
@@ -121,6 +123,7 @@ final class VirtualDisplayManager: ObservableObject {
     // MARK: - 生命周期
 
     func start() {
+        isRebuilding = false
         guard display == nil else { return }
         let scale = hiDPI ? 2 : 1
         let descriptor = CGVirtualDisplayDescriptor()
@@ -165,6 +168,7 @@ final class VirtualDisplayManager: ObservableObject {
     }
 
     func stop() {
+        isRebuilding = false
         display = nil  // 释放对象即移除虚拟屏幕
         isActive = false
         displayID = 0
@@ -189,7 +193,12 @@ final class VirtualDisplayManager: ObservableObject {
         } else {
             // 超出最大像素或切换 HiDPI 时需要重建屏幕
             stop()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.start() }
+            isRebuilding = true
+            // 等待期间用户关闭了屏幕（stop 会清掉 isRebuilding）就不再重建
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                guard let self, self.isRebuilding else { return }
+                self.start()
+            }
         }
     }
 

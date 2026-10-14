@@ -17,7 +17,7 @@ struct PanelView: View {
 
     private enum CustomField { case width, height }
 
-    private var controller: AppController { .shared }
+    @ObservedObject private var controller = AppController.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -293,8 +293,10 @@ struct PanelView: View {
         Card(title: "虚拟屏幕", icon: "display") {
             ToggleRow(
                 title: "启用虚拟屏幕",
-                subtitle: display.isActive ? displayStatus : "无显示器或合盖时也能获得远程桌面画面",
-                isOn: Binding(get: { display.isActive }, set: { display.setEnabled($0) })
+                subtitle: display.isRebuilding ? "正在应用新设置…"
+                    : display.isActive ? displayStatus : "无显示器或合盖时也能获得远程桌面画面",
+                // 重建期间仍显示为开启，此时关掉会取消重建，而不是立即再建一块屏幕
+                isOn: Binding(get: { display.isActive || display.isRebuilding }, set: { display.setEnabled($0) })
             )
 
             HStack {

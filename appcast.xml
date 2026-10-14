@@ -3,6 +3,33 @@
     <channel>
         <title>RemoteMate</title>
         <item>
+            <title>1.3.0</title>
+            <pubDate>Wed, 14 Oct 2026 21:33:51 +0800</pubDate>
+            <sparkle:version>6</sparkle:version>
+            <sparkle:shortVersionString>1.3.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## 新增
+
+- **可选的 UU 保活**：在「自动启动 UU 远程」旁新增独立的「UU 保活」勾选项。开启远程模式并勾选两项后，每 10 秒检查 UU 主程序，退出后在后台重新启动，不抢焦点。
+
+## 升级说明
+
+- 原有「自动启动 UU 远程」仍只在开启远程模式时启动一次；「UU 保活」默认关闭，已有用户升级后不会自动启用保活。
+- 未开启保活、且其他纳入项目均已关闭时，退出 UU 会同时退出远程模式；开启保活后则保持模式，等待重新启动 UU。
+- 主动勾选保活后，使用 ⌘Q 手动退出 UU 也会触发重新启动。若要退出 UU，请先取消「UU 保活」或关闭远程模式；停止保活不会退出已运行的 UU。
+- 重启 RemoteMate 后，只有勾选了「启动后自动开启远程模式」才会自动恢复远程模式及满足条件的保活。主程序重新启动不等于远程会话已恢复。
+
+## 修复
+
+- 菜单栏状态点与面板顶部的远程模式状态保持一致，单独开启防休眠不再让状态点变实心。
+- UU 未安装时不启用保活，也不将其计为已开启项目；面板会提示该功能不可用。
+- 后台冷启动超过短暂检测窗口时，不再显示要求用户重试的误报；取消启动检查后及时刷新进程状态。
+- 后台启动期间点击 UU 行，会保留切到前台的请求，当前请求结束后执行。
+]]></description>
+            <enclosure url="https://github.com/erjin-zhi/remote-mate/releases/download/v1.3.0/RemoteMate-1.3.0-macOS-arm64.dmg" length="2953019" type="application/octet-stream" sparkle:edSignature="YvjXXSqdQsfhFWMv+dSB12erOKZQk4M7FOshrKew7rQn/uLrwczUX2g8/EPDwhPIBBK//Z5Leyv2IGxPZRkbBw=="/>
+        </item>
+        <item>
             <title>1.2.0</title>
             <pubDate>Wed, 14 Oct 2026 19:11:42 +0800</pubDate>
             <sparkle:version>5</sparkle:version>
@@ -34,21 +61,6 @@
 - **一键远程模式卡片**：鼠标移上去时显示为手型，卡片会随指针轻微倾斜，并在指针处出现柔和的高光。
 ]]></description>
             <enclosure url="https://github.com/erjin-zhi/remote-mate/releases/download/v1.1.1/RemoteMate-1.1.1-macOS-arm64.dmg" length="2940678" type="application/octet-stream" sparkle:edSignature="M55CX5QuU9Gkx0Ax8G46hmrEqGh7cUuw/hxw2JwSmLjre2gTx3V9yOBRiE6dUYAQmmXGHeixzQ1iVtEsMw/9Dg=="/>
-        </item>
-        <item>
-            <title>1.1.0</title>
-            <pubDate>Tue, 13 Oct 2026 15:50:57 +0800</pubDate>
-            <sparkle:version>3</sparkle:version>
-            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## 新增
-
-- **检查更新**：运行期间每天自动检查一次新版本，发现后由你选择是否安装，确认后自动下载、安装并重启。也可在「偏好设置」中点击「检查更新…」手动检查，或关闭自动检查。
-
-> 从 1.0.x 升级需要手动安装一次本版本，之后即可在应用内更新。
-]]></description>
-            <enclosure url="https://github.com/erjin-zhi/remote-mate/releases/download/v1.1.0/RemoteMate-1.1.0-macOS-arm64.dmg" length="2932013" type="application/octet-stream" sparkle:edSignature="yPaUQCX861Fd89Sen/mHLkTnspJV+Tnpm4vtKB2aufw/z59eRDrcCxGwQtmYdmZTIxQN4P2Q55xdSFkBW258Aw=="/>
         </item>
     </channel>
 </rss>

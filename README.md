@@ -1,59 +1,64 @@
-# RemoteMate · 远程伴侣
+<p align="center">
+  <img src="Branding/RemoteMate/app-icon-light.png" width="128" alt="RemoteMate 图标">
+</p>
 
-**为远程连接，一键准备好你的 Mac。**
+<h1 align="center">RemoteMate · 远程伴侣</h1>
 
-<img src="Branding/RemoteMate/app-icon-light.png" width="160" alt="RemoteMate 远程伴侣 App 图标">
+<p align="center"><strong>远程连接前，一键准备好你的 Mac。</strong></p>
+<p align="center">防休眠 · 合盖运行 · 虚拟屏幕 · 网络检测</p>
 
-RemoteMate（中文名：远程伴侣）是一款 macOS 菜单栏工具，提供一键防休眠、虚拟屏幕、网络检查和 UU 远程联动，方便用远程桌面软件连接这台 Mac。
+<p align="center">
+  <a href="https://github.com/erjin-zhi/remote-mate/releases/latest"><strong>下载最新版</strong></a>
+  &nbsp; · &nbsp;
+  <a href="https://github.com/erjin-zhi/remote-mate/releases">更新日志</a>
+  &nbsp; · &nbsp;
+  <a href="https://github.com/erjin-zhi/remote-mate/issues">反馈问题</a>
+</p>
 
-- 英文名：**RemoteMate**
-- 中文名：**远程伴侣**
-- 项目目录：`remote-mate`
-- App 文件名：`RemoteMate.app`；支持英文、简体中文应用显示名称。
+<p align="center"><sub>macOS 14 及以上 · 菜单栏工具 · 配合远程桌面软件使用</sub></p>
 
-## 功能
-- **一键远程模式**：同时开启下面勾选的各项（在「偏好设置」中选择包含哪些）
-- **接通电源时不休眠 / 使用电池时不休眠**：IOPMAssertion，根据当前供电自动生效，无需权限
-- **保持屏幕常亮**：防止远程画面因显示器休眠而黑屏
-- **合盖不休眠**：`pmset -a disablesleep 1`，跟随供电生效——接电源时需开启「接通电源时不休眠」，
-  用电池时需开启「使用电池时不休眠」，插拔电源自动切换。需要管理员权限；可一次性「免密码授权」
-  （在 `/etc/sudoers.d/remote-mate` 写入只允许 `pmset -a disablesleep 0/1` 的规则，可随时撤销）
-- **网络状况**：内网（ping 网关）、外网（ping 223.5.5.5）、UU 服务器（HTTPS `api.nrd.nie.163.com`）延迟，
-  以及 UU 远程主程序与后台服务状态；ping 绑定物理网卡，绕开代理 TUN
-- **一键开启时自动启动 UU 远程**（可在偏好设置关闭；一键关闭不会退出 UU）。每次点击都会重新查询主程序状态，未运行时立即启动，不依赖面板缓存；启动失败会显示原因。
-- 仅安装 UU 远程后才检测并显示 UU 服务器延迟与主程序状态；主程序运行不代表已经建立远程连接或一定可被控。
-- 「UU 远程」整行悬停显示手型：未启动（包括仅后台服务运行）时显示「打开」按钮；主程序已运行时显示跳转箭头，点击切换到前台。未启动时显示红灯与红色「未启动」，避免将后台服务误认为主程序已运行。
-- **虚拟屏幕**：基于 CoreGraphics 私有 API `CGVirtualDisplay`，支持预设/自定义分辨率、30/60/120Hz、HiDPI、设为主显示器
-- 登录时启动、启动后自动开启远程模式、退出时恢复合盖休眠
-- **检查更新**：基于 Sparkle，读取 GitHub 上的更新清单，每天自动检查一次，也可在偏好设置中手动检查；确认后自动下载安装并重启（见 [Updates/README.md](Updates/README.md)）
+## 界面一览
 
-## 构建
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <strong>一键准备，状态一目了然</strong><br><br>
+      <img src="docs/images/overview.png" width="360" alt="RemoteMate 主面板：一键远程模式、网络延迟、UU 运行状态与防休眠开关">
+    </td>
+    <td width="50%" align="center" valign="top">
+      <strong>按需配置屏幕与启动行为</strong><br><br>
+      <img src="docs/images/virtual-display.png" width="360" alt="虚拟屏幕设置：分辨率、30/60/120 Hz、HiDPI 与主显示器选项"><br>
+      <img src="docs/images/preferences.png" width="360" alt="偏好设置：远程模式包含项、外接显示器检测、UU 自动启动、登录启动与检查更新">
+    </td>
+  </tr>
+</table>
+
+<p align="center"><sub>v1.2.0 实际界面截图，按功能区域裁切。<a href="docs/images/main-panel.png">查看完整主面板</a></sub></p>
+
+## 能做什么
+
+- **一键远程模式**：按你的选择开启防休眠、合盖运行和虚拟屏幕，也可自动启动 UU 远程。
+- **灵活防休眠**：分别设置接电、电池和屏幕常亮；合盖不休眠随当前供电设置生效。
+- **适配远程画面**：预设或自定义分辨率，支持 30 / 60 / 120 Hz、HiDPI 和主显示器切换；可在已接外接显示器时跳过创建虚拟屏幕。
+- **随时查看状态**：检测内网、外网延迟；安装 UU 远程后，还会显示其服务器延迟和主程序状态，支持一键打开。
+- **减少重复操作**：支持登录启动、启动后自动开启远程模式，以及应用内检查更新。
+
+## 开始使用
+
+1. 从 [Releases](https://github.com/erjin-zhi/remote-mate/releases/latest) 下载 DMG，将 **RemoteMate** 拖入「应用程序」。
+2. 打开应用，点击菜单栏图标，在「偏好设置」中选择远程模式包含的项目。
+3. 点击「开启」，再用你的远程桌面软件连接这台 Mac。
+
+合盖不休眠需要管理员授权，可选择开启或撤销「免密码授权」。合盖运行时请保持散热，装包前关闭防休眠。退出应用会关闭防休眠和虚拟屏幕，默认恢复合盖休眠。
+
+UU「主程序运行中」仅表示客户端已启动，不代表远程连接已建立。
+
+## 开发
+
+需要 macOS 14+ 和 Xcode 命令行工具：
+
 ```bash
 ./build.sh
-osascript -e 'quit app id "com.remotemate.app"'
-rm -rf /Applications/RemoteMate.app
-ditto --norsrc --noextattr "build/RemoteMate.app" /Applications/RemoteMate.app
-open "/Applications/RemoteMate.app"
 ```
-安装请用 `ditto --norsrc --noextattr`，不要用 `cp -R`：项目位于 iCloud 等同步目录时，`cp -R` 会带上扩展属性，导致安装后的 App 签名失效。
-需要 macOS 14+、Xcode 命令行工具。
 
-打包发布用 DMG（带拖动安装引导背景，输出到 `build/releases/<版本号>/`，并生成 `SHA256SUMS.txt`）：
-```bash
-./build.sh
-scripts/build-dmg.sh 1.1.0
-```
-打包时会短暂挂载并打开 DMG 窗口，用于写入 Finder 布局；版本号需与 `Updates/config.json` 中的 `version` 保持一致。
-
-正式发版（GitHub Release + 应用内更新）用 `python3 scripts/release.py --publish`，步骤见 [Updates/README.md](Updates/README.md)。
-
-## 图标与命名
-
-- App 图标采用浅薄荷绿底、白色显示器和黄色圆形状态灯，源图为 `Branding/RemoteMate/app-icon-light.png`。
-- `Resources/AppIcon.icns` 包含 macOS 所需的多尺寸图标，构建时自动写入 App Bundle，供 Finder 和 DMG 中的应用文件显示。
-- 菜单栏使用单色显示器与状态灯：空心表示防休眠和虚拟屏幕均未生效，实心表示至少一项正在生效；它不表示远程会话是否已连接。
-- 更新源图后，运行 `./scripts/build-icon.sh` 重新生成 ICNS，然后执行 `./build.sh`。
-
-## 注意
-- 合盖不休眠生效时会禁用系统所有休眠；用电池时若开启了「使用电池时不休眠」，装进包里前请关闭，避免过热和耗电。
-- 退出应用时，防休眠断言和虚拟屏幕会自动释放；合盖设置默认恢复（可在偏好设置里关掉）。
+产物位于 `build/RemoteMate.app`。详见 [本地安装与开发说明](docs/development.md) · [打包与发布](Updates/README.md)。

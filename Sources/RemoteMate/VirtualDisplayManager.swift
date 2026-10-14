@@ -9,20 +9,49 @@ struct Resolution: Hashable, Identifiable {
     var id: String { "\(width)x\(height)" }
     var label: String { "\(width) × \(height)" }
 
-    static let presets: [Resolution] = [
-        .init(width: 1280, height: 720),
-        .init(width: 1280, height: 800),
-        .init(width: 1366, height: 768),
-        .init(width: 1440, height: 900),
-        .init(width: 1600, height: 900),
-        .init(width: 1680, height: 1050),
-        .init(width: 1920, height: 1080),
-        .init(width: 1920, height: 1200),
-        .init(width: 2048, height: 1536),
-        .init(width: 2560, height: 1440),
-        .init(width: 2560, height: 1600),
-        .init(width: 3440, height: 1440),
-        .init(width: 3840, height: 2160),
+    /// 与远程端屏幕比例一致时画面铺满、不留黑边。
+    var menuLabel: String {
+        guard let note = Self.notes[self] else { return label }
+        return "\(label)（\(note)）"
+    }
+
+    /// 按控制端设备分组，菜单里组与组之间用分隔线隔开；1920 × 1080 两端通用，单独放在中间。
+    static let presetGroups: [[Resolution]] = [
+        [
+            .init(width: 1280, height: 720),
+            .init(width: 1440, height: 900),
+            .init(width: 1680, height: 1050),
+            .init(width: 1920, height: 1200),
+            .init(width: 2560, height: 1440),
+            .init(width: 2560, height: 1600),
+            .init(width: 3840, height: 2160),
+        ],
+        [
+            .init(width: 1920, height: 1080),
+        ],
+        [
+            .init(width: 1335, height: 939),
+            .init(width: 1416, height: 984),
+            .init(width: 1600, height: 1200),
+        ],
+    ]
+
+    static var presets: [Resolution] { presetGroups.flatMap { $0 } }
+
+    private static let notes: [Resolution: String] = [
+        .init(width: 1280, height: 720): "流畅 16:9",
+        // iPhone Duo 内屏 2670 × 1878（横屏）的一半，比例约 10:7
+        .init(width: 1335, height: 939): "iPhone Duo 展开 10:7",
+        // iPad Air 11 / iPad 2360 × 1640 的 0.6 倍
+        .init(width: 1416, height: 984): "iPad 11 寸",
+        .init(width: 1440, height: 900): "MacBook 16:10",
+        .init(width: 1600, height: 1200): "iPad 13 寸 4:3",
+        .init(width: 1680, height: 1050): "MacBook 大屏 16:10",
+        .init(width: 1920, height: 1080): "通用 16:9",
+        .init(width: 1920, height: 1200): "16:10",
+        .init(width: 2560, height: 1600): "16:10",
+        .init(width: 2560, height: 1440): "2K 16:9",
+        .init(width: 3840, height: 2160): "4K 16:9",
     ]
 
     static let widthRange = 640...7680

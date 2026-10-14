@@ -309,16 +309,19 @@ struct PanelView: View {
                 .controlSize(.small)
                 .disabled(editingCustom)
                 Menu(display.resolution.label) {
-                    ForEach(Resolution.presets) { preset in
-                        Button {
-                            display.setResolution(width: preset.width, height: preset.height)
-                            editingCustom = false
-                        } label: {
-                            if preset == display.resolution {
-                                Label(preset.label, systemImage: "checkmark")
-                            } else {
-                                Text(preset.label)
+                    // 每组一个内联 Picker：使用菜单原生的勾选栏保持左对齐，Section 之间自动加分隔线
+                    ForEach(Resolution.presetGroups.indices, id: \.self) { index in
+                        Section {
+                            Picker("分辨率", selection: Binding(
+                                get: { display.resolution },
+                                set: { selectResolution($0) }
+                            )) {
+                                ForEach(Resolution.presetGroups[index]) { preset in
+                                    Text(preset.menuLabel).tag(preset)
+                                }
                             }
+                            .pickerStyle(.inline)
+                            .labelsHidden()
                         }
                     }
                 }
@@ -389,6 +392,11 @@ struct PanelView: View {
         var text = "ID \(display.displayID)"
         if !display.currentModeText.isEmpty { text += " · \(display.currentModeText)" }
         return text
+    }
+
+    private func selectResolution(_ resolution: Resolution) {
+        display.setResolution(width: resolution.width, height: resolution.height)
+        editingCustom = false
     }
 
     private func applyCustomResolution() {

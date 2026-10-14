@@ -85,7 +85,7 @@ def init_feed(config):
         head = api(f'repos/{repo}/git/ref/heads/main')['object']['sha']
         api(f'repos/{repo}/git/refs', {'ref': f"refs/heads/{config['feedBranch']}", 'sha': head})
     api(f'repos/{repo}/contents/{FEED_PATH}', {
-        'branch': config['feedBranch'], 'message': 'chore: initialize update feed',
+        'branch': config['feedBranch'], 'message': '🧹 chore(updates): initialize update feed',
         'content': base64.b64encode(EMPTY_FEED).decode()})
 
 
@@ -134,7 +134,7 @@ def publish(config, stage, head):
     if release['draft']:
         run('gh', 'release', 'edit', tag, '--repo', repo, '--draft=false', '--latest')
     # 资产公开后才推送 appcast；contents SHA 防止并发覆盖。
-    payload = {'branch': config['feedBranch'], 'message': f'chore: publish {tag} update feed',
+    payload = {'branch': config['feedBranch'], 'message': f'🧹 chore(updates): publish {tag} update feed',
                'content': base64.b64encode(feed).decode()}
     if sha:
         payload['sha'] = sha

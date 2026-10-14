@@ -60,4 +60,6 @@ rm -rf "$DEST"
 mkdir -p build
 ditto --norsrc --noextattr "$APP" "$DEST"
 echo "✅ 已生成: $DEST"
-echo "   安装: cp -R \"$DEST\" /Applications/"
+# cp -R 会带上 iCloud 等附加的扩展属性，导致安装后的 App 签名失效
+echo "   安装（先退出正在运行的 RemoteMate）:"
+echo "   rm -rf /Applications/RemoteMate.app && ditto --norsrc --noextattr \"$DEST\" /Applications/RemoteMate.app"

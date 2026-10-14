@@ -30,9 +30,12 @@ RemoteMate（中文名：远程伴侣）是一款 macOS 菜单栏工具，提供
 ## 构建
 ```bash
 ./build.sh
-cp -R "build/RemoteMate.app" /Applications/
+osascript -e 'quit app id "com.remotemate.app"'
+rm -rf /Applications/RemoteMate.app
+ditto --norsrc --noextattr "build/RemoteMate.app" /Applications/RemoteMate.app
 open "/Applications/RemoteMate.app"
 ```
+安装请用 `ditto --norsrc --noextattr`，不要用 `cp -R`：项目位于 iCloud 等同步目录时，`cp -R` 会带上扩展属性，导致安装后的 App 签名失效。
 需要 macOS 14+、Xcode 命令行工具。
 
 打包发布用 DMG（带拖动安装引导背景，输出到 `build/releases/<版本号>/`，并生成 `SHA256SUMS.txt`）：

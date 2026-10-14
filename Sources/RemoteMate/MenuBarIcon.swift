@@ -1,7 +1,7 @@
 import AppKit
 
 /// Fixed monitor silhouette with a hollow/solid status light.
-/// Reports local feature activity, never remote connection status.
+/// Follows the one-click remote mode state, never remote connection status.
 enum MenuBarIcon {
     static let idle = make(active: false)
     static let active = make(active: true)

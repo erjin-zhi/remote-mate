@@ -10,18 +10,20 @@ final class Preferences: ObservableObject {
         static let includeDisplay = "remote.includeDisplay"
         static let skipDisplayIfExternal = "remote.skipDisplayIfExternal"
         static let launchUU = "remote.launchUU"
+        static let keepUUAlive = "remote.keepUUAlive"
         static let autoStartRemote = "app.autoStartRemote"
         static let restoreOnQuit = "app.restoreLidOnQuit"
     }
 
-    static func registerDefaults() {
-        UserDefaults.standard.register(defaults: [
+    static func registerDefaults(in defaults: UserDefaults = .standard) {
+        defaults.register(defaults: [
             Keys.includeAC: true,
             Keys.includeBattery: false,
             Keys.includeLid: true,
             Keys.includeDisplay: true,
             Keys.skipDisplayIfExternal: true,
             Keys.launchUU: true,
+            Keys.keepUUAlive: false,
             Keys.autoStartRemote: false,
             Keys.restoreOnQuit: true,
             "sleep.keepDisplayAwake": true,
@@ -39,19 +41,24 @@ final class Preferences: ObservableObject {
     @Published var includeDisplay: Bool { didSet { save(includeDisplay, Keys.includeDisplay) } }
     @Published var skipDisplayIfExternal: Bool { didSet { save(skipDisplayIfExternal, Keys.skipDisplayIfExternal) } }
     @Published var launchUU: Bool { didSet { save(launchUU, Keys.launchUU) } }
+    @Published var keepUUAlive: Bool { didSet { save(keepUUAlive, Keys.keepUUAlive) } }
     @Published var autoStartRemote: Bool { didSet { save(autoStartRemote, Keys.autoStartRemote) } }
     @Published var restoreOnQuit: Bool { didSet { save(restoreOnQuit, Keys.restoreOnQuit) } }
     @Published private(set) var launchAtLogin = SMAppService.mainApp.status == .enabled
     @Published var lastError: String?
 
-    init() {
-        let d = UserDefaults.standard
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        let d = defaults
         includeAC = d.bool(forKey: Keys.includeAC)
         includeBattery = d.bool(forKey: Keys.includeBattery)
         includeLid = d.bool(forKey: Keys.includeLid)
         includeDisplay = d.bool(forKey: Keys.includeDisplay)
         skipDisplayIfExternal = d.bool(forKey: Keys.skipDisplayIfExternal)
         launchUU = d.bool(forKey: Keys.launchUU)
+        keepUUAlive = d.bool(forKey: Keys.keepUUAlive)
         autoStartRemote = d.bool(forKey: Keys.autoStartRemote)
         restoreOnQuit = d.bool(forKey: Keys.restoreOnQuit)
     }
@@ -70,6 +77,6 @@ final class Preferences: ObservableObject {
     }
 
     private func save(_ value: Bool, _ key: String) {
-        UserDefaults.standard.set(value, forKey: key)
+        defaults.set(value, forKey: key)
     }
 }

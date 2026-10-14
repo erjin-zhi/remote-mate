@@ -36,6 +36,7 @@ final class NetworkMonitor: ObservableObject {
     @Published private(set) var uuService = Probe()
     @Published private(set) var uuStatus: UUStatus = .notInstalled
     @Published private(set) var isLaunchingUU = false
+    @Published private(set) var isUUKeepAliveEnabled = false
     @Published var lastError: String?
     private(set) var uuLaunchTask: Task<Void, Never>?
     @Published private(set) var isChecking = false
@@ -44,11 +45,17 @@ final class NetworkMonitor: ObservableObject {
     private let pathMonitor = NWPathMonitor()
     private var timer: Timer?
     private var uuStatusTimer: Timer?
+    private var uuKeepAliveTimer: Timer?
+    private let uuKeepAliveInterval: TimeInterval
+    private var isKeepAliveLaunch = false
+    private var isBackgroundUULaunch = false
+    private var pendingUUActivation = false
     private var workspaceObservers: [NSObjectProtocol] = []
     private let uuEnvironment: UUApplicationEnvironment
 
-    init(uuEnvironment: UUApplicationEnvironment? = nil) {
+    init(uuEnvironment: UUApplicationEnvironment? = nil, uuKeepAliveInterval: TimeInterval = 10) {
         self.uuEnvironment = uuEnvironment ?? .live
+        self.uuKeepAliveInterval = uuKeepAliveInterval
         pathMonitor.pathUpdateHandler = { [weak self] path in
             DispatchQueue.main.async { self?.update(path: path) }
         }
@@ -67,6 +74,7 @@ final class NetworkMonitor: ObservableObject {
     deinit {
         timer?.invalidate()
         uuStatusTimer?.invalidate()
+        uuKeepAliveTimer?.invalidate()
         pathMonitor.cancel()
         for observer in workspaceObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
     }
@@ -116,7 +124,15 @@ final class NetworkMonitor: ObservableObject {
     }
 
     func openUU(activate: Bool = true) {
-        guard !isLaunchingUU else { return }
+        openUU(activate: activate, keepAliveOnly: false)
+    }
+
+    private func openUU(activate: Bool, keepAliveOnly: Bool) {
+        guard !isLaunchingUU else {
+            // 合并重复启动，但保留用户要求切到前台的意图。
+            if activate && isBackgroundUULaunch { pendingUUActivation = true }
+            return
+        }
         refreshUUStatus()
         guard uuStatus != .notInstalled else {
             lastError = "未找到 UU 远程，请先将其安装到应用程序文件夹。"
@@ -124,11 +140,26 @@ final class NetworkMonitor: ObservableObject {
         }
         lastError = nil
         isLaunchingUU = true
+        isKeepAliveLaunch = keepAliveOnly
+        isBackgroundUULaunch = !activate
         uuLaunchTask = Task { [weak self] in
             guard let self else { return }
-            defer { self.isLaunchingUU = false }
+            defer {
+                self.refreshUUStatus()
+                self.isLaunchingUU = false
+                self.isKeepAliveLaunch = false
+                self.isBackgroundUULaunch = false
+                if self.pendingUUActivation {
+                    self.pendingUUActivation = false
+                    // 前一个请求已经结束，前台请求独立于保活是否仍开启。
+                    self.openUU(activate: true)
+                }
+            }
+            // 关闭模式或取消勾选可能发生在任务真正开始前。
+            guard !Task.isCancelled, !keepAliveOnly || self.isUUKeepAliveEnabled else { return }
             do {
                 try await self.uuEnvironment.open(activate)
+                try Task.checkCancellation()
                 // 启动回调与 Workspace 主程序列表的更新可能相差片刻。
                 for _ in 0..<10 {
                     self.refreshUUStatus()
@@ -136,10 +167,13 @@ final class NetworkMonitor: ObservableObject {
                     try await Task.sleep(nanoseconds: 200_000_000)
                 }
                 self.refreshUUStatus()
-                if self.uuStatus != .running {
+                if self.uuStatus != .running && !keepAliveOnly {
                     self.lastError = "已请求启动 UU 远程，但尚未检测到主程序，请重试。"
                 }
+            } catch is CancellationError {
+                // 停止保活不报启动失败，也不退出已交给系统启动的 UU。
             } catch {
+                guard !Task.isCancelled else { return }
                 self.refreshUUStatus()
                 self.lastError = "启动 UU 远程失败：\(error.localizedDescription)"
             }
@@ -152,6 +186,50 @@ final class NetworkMonitor: ObservableObject {
         refreshUUStatus()
         guard uuStatus.canLaunch else { return }
         openUU(activate: false)
+    }
+
+    /// 独立于面板刷新：仅远程模式与 UU 选项同时开启时维持主程序运行。
+    func updateUUKeepAlive(remoteModeOn: Bool, launchUU: Bool, keepAlive: Bool) {
+        let requested = remoteModeOn && launchUU && keepAlive
+        refreshUUStatus()
+        guard requested else {
+            stopKeepAlive()
+            return
+        }
+        guard isUUInstalled else {
+            stopKeepAlive(reason: "未找到 UU 远程，无法启用保活。请先将其安装到应用程序文件夹。")
+            return
+        }
+        guard !isUUKeepAliveEnabled else { return }
+        isUUKeepAliveEnabled = true
+        maintainUU()
+        guard isUUKeepAliveEnabled else { return }
+        let timer = Timer(timeInterval: uuKeepAliveInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.maintainUU() }
+        }
+        timer.tolerance = min(1, uuKeepAliveInterval / 10)
+        RunLoop.main.add(timer, forMode: .common)
+        uuKeepAliveTimer = timer
+    }
+
+    private func stopKeepAlive(reason: String? = nil) {
+        if isUUKeepAliveEnabled { isUUKeepAliveEnabled = false }
+        uuKeepAliveTimer?.invalidate()
+        uuKeepAliveTimer = nil
+        if isKeepAliveLaunch { uuLaunchTask?.cancel() }
+        if let reason { lastError = reason }
+    }
+
+    private func maintainUU() {
+        guard isUUKeepAliveEnabled else { return }
+        refreshUUStatus()
+        guard isUUInstalled else {
+            stopKeepAlive(reason: "UU 远程已不在应用程序文件夹中，保活已停止。")
+            return
+        }
+        guard uuStatus.canLaunch else { return }
+        // 失败后等下一轮再重试；已有启动请求时 openUU 会去重。
+        openUU(activate: false, keepAliveOnly: true)
     }
 
     // MARK: - 内部

@@ -40,6 +40,7 @@ final class UUApplicationTests: XCTestCase {
         ))
         monitor.launchUUIfNeeded()
         XCTAssertTrue(monitor.isLaunchingUU)
+        XCTAssertFalse(monitor.isUUKeepAliveEnabled, "One-shot launch must not enable keep-alive")
         await monitor.uuLaunchTask?.value
         XCTAssertEqual(requests, [false], "Automatic launch must not steal focus")
         XCTAssertEqual(monitor.uuStatus, .running)
@@ -90,7 +91,7 @@ final class UUApplicationTests: XCTestCase {
             isInstalled: { true }, isClientRunning: { client },
             isBackgroundRunning: { true }, open: { _ in
                 requests += 1
-                await withCheckedContinuation { continuation = $0 }
+                if requests == 1 { await withCheckedContinuation { continuation = $0 } }
                 client = true
             }
         ))
@@ -101,6 +102,8 @@ final class UUApplicationTests: XCTestCase {
         XCTAssertEqual(requests, 1)
         continuation?.resume()
         await monitor.uuLaunchTask?.value
+        await monitor.uuLaunchTask?.value // The queued foreground request follows the background launch.
+        XCTAssertEqual(requests, 2)
         XCTAssertEqual(monitor.uuStatus, .running)
     }
 
@@ -145,6 +148,17 @@ final class UUApplicationTests: XCTestCase {
         await monitor.uuLaunchTask?.value
         XCTAssertEqual(requests, [true])
         XCTAssertNil(monitor.lastError)
+    }
+
+    func testManualLaunchStillReportsUnconfirmedStartup() async {
+        let monitor = NetworkMonitor(uuEnvironment: .init(
+            isInstalled: { true }, isClientRunning: { false },
+            isBackgroundRunning: { true }, open: { _ in }
+        ))
+        monitor.openUU()
+        await monitor.uuLaunchTask?.value
+        XCTAssertNotNil(monitor.lastError)
+        XCTAssertFalse(monitor.isLaunchingUU)
     }
 
 

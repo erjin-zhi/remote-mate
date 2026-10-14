@@ -24,7 +24,7 @@ swift package resolve
 
 ## 每次发版
 
-1. 修改 `config.json` 的 `version` 和 `build`（构建号必须严格递增），编写 `Updates/<version>.md` 更新说明（会显示在更新弹窗中）。
+1. 修改 `config.json` 的 `version` 和 `build`（构建号必须严格递增），将 [待发布说明](Unreleased.md) 中本次发布的内容移入 `Updates/<version>.md`（会显示在更新弹窗中），保留升级行为说明并清理已发布的草稿内容。
 2. 提交并推送到 `main`。
 3. 执行：
 

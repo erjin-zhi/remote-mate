@@ -18,18 +18,22 @@ struct RemoteMateApp: App {
                 .environmentObject(controller.prefs)
                 .environmentObject(controller.sleep)
                 .environmentObject(controller.display)
+                .environmentObject(controller.network)
         }
         .menuBarExtraStyle(.window)
     }
 }
 
 struct MenuBarLabel: View {
+    @ObservedObject private var controller = AppController.shared
+    @EnvironmentObject private var prefs: Preferences
     @EnvironmentObject private var sleep: SleepManager
     @EnvironmentObject private var display: VirtualDisplayManager
+    @EnvironmentObject private var network: NetworkMonitor
 
     var body: some View {
-        let anyOn = sleep.isPreventingIdleSleep || sleep.lidSleepDisabled || display.isActive
-        Image(nsImage: anyOn ? MenuBarIcon.active : MenuBarIcon.idle)
+        let state = controller.remoteState
+        Image(nsImage: state == .off ? MenuBarIcon.idle : MenuBarIcon.active)
             .renderingMode(.template)
             .frame(width: 20, height: 18)
             .help("RemoteMate · 远程伴侣 · \(statusDescription)")
@@ -38,10 +42,19 @@ struct MenuBarLabel: View {
     }
 
     private var statusDescription: String {
+        let mode: String
+        switch controller.remoteState {
+        case .off: mode = "远程模式未开启"
+        case .partial: mode = "远程模式部分开启"
+        case .on: mode = "远程模式已开启"
+        }
         var active: [String] = []
         if sleep.isPreventingIdleSleep { active.append("防休眠生效") }
         if sleep.lidSleepDisabled { active.append("合盖不休眠生效") }
         if display.isActive { active.append("虚拟屏幕已开启") }
-        return active.isEmpty ? "防休眠与虚拟屏幕均未生效" : active.joined(separator: "，")
+        if prefs.launchUU && prefs.keepUUAlive {
+            active.append(network.isUUKeepAliveEnabled ? "UU 保活已启用" : "UU 保活未启用")
+        }
+        return ([mode] + active).joined(separator: "，")
     }
 }

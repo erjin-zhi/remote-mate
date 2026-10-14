@@ -177,9 +177,9 @@ struct PanelView: View {
                 Image(systemName: "arrow.up.forward")
                     .font(.caption).foregroundStyle(.secondary)
             } else {
-                Text("打开")
+                Text(network.isLaunchingUU ? "显示" : "打开")
                     .font(.caption)
-                    .foregroundStyle(network.isLaunchingUU ? Color.secondary : Color.accentColor)
+                    .foregroundStyle(Color.accentColor)
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(RoundedRectangle(cornerRadius: 5)
                         .fill(Color.accentColor.opacity(0.12)))
@@ -191,8 +191,9 @@ struct PanelView: View {
         .accessibilityHidden(true)
         .overlay {
             HandCursorButton(
-                isEnabled: !network.isLaunchingUU,
-                label: network.uuStatus == .running ? "切换到 UU 远程" : "打开 UU 远程",
+                isEnabled: network.isUUInstalled,
+                label: network.isLaunchingUU ? "启动完成后显示 UU 远程"
+                    : network.uuStatus == .running ? "切换到 UU 远程" : "打开 UU 远程",
                 value: network.isLaunchingUU ? "启动中" : uuText,
                 onHover: { hoveringUU = $0 },
                 action: { network.openUU(activate: true) }
@@ -226,8 +227,8 @@ struct PanelView: View {
         if prefs.includeBattery && sleep.hasBattery { items.append("电池不休眠") }
         if prefs.includeLid { items.append("合盖不休眠") }
         if prefs.includeDisplay { items.append("虚拟屏幕") }
-        if prefs.launchUU && network.uuStatus != .notInstalled { items.append("启动 UU") }
-        return items.isEmpty ? "未选择任何项目，请在偏好设置中勾选" : items.joined(separator: " · ")
+        if prefs.launchUU && network.isUUInstalled { items.append(prefs.keepUUAlive ? "UU 保活" : "启动 UU") }
+        return items.isEmpty ? "未选择可用项目，请检查偏好设置" : items.joined(separator: " · ")
     }
 
     // MARK: - 防休眠
@@ -469,7 +470,17 @@ struct PanelView: View {
                     Toggle("已接外接显示器时不创建", isOn: $prefs.skipDisplayIfExternal)
                         .disabled(!prefs.includeDisplay)
                 }
-                Toggle("UU 远程未运行时自动启动", isOn: $prefs.launchUU)
+                HStack {
+                    Toggle("自动启动 UU 远程", isOn: $prefs.launchUU)
+                        .help("开启远程模式时，若 UU 主程序未运行则启动一次。")
+                    Toggle("UU 保活", isOn: $prefs.keepUUAlive)
+                        .disabled(!prefs.launchUU)
+                        .help("需同时开启远程模式和自动启动 UU。每 10 秒检查一次，手动退出 UU 后也会重新启动；关闭远程模式或取消任一勾选即停止保活，不退出 UU。")
+                }
+                if prefs.launchUU && !network.isUUInstalled {
+                    Text("未安装 UU 远程，自动启动与保活不可用")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Divider()
                 Toggle("登录时启动远程伴侣", isOn: Binding(
                     get: { prefs.launchAtLogin },

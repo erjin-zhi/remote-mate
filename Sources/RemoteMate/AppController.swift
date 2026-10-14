@@ -24,6 +24,12 @@ final class AppController: ObservableObject {
         display = VirtualDisplayManager()
         network = NetworkMonitor()
 
+        $isRemoteModeOn.combineLatest(prefs.$launchUU, prefs.$keepUUAlive)
+            .sink { [weak self] remoteModeOn, launchUU, keepAlive in
+                self?.network.updateUUKeepAlive(remoteModeOn: remoteModeOn, launchUU: launchUU, keepAlive: keepAlive)
+            }
+            .store(in: &cancellables)
+
         display.$hasExternalDisplay
             .removeDuplicates()
             .sink { [weak self] hasExternal in
@@ -44,7 +50,8 @@ final class AppController: ObservableObject {
 
         // 远程模式下用户把纳入的各项都手动关掉后，视为退出远程模式，
         // 否则之后单独打开某一项时按钮又会显示为「部分开启」。
-        sleep.objectWillChange.merge(with: display.objectWillChange)
+        // 未启用保活时，退出最后一个运行中的 UU 也会退出模式；保活中则继续等待重启。
+        sleep.objectWillChange.merge(with: display.objectWillChange, prefs.objectWillChange, network.objectWillChange)
             .receive(on: RunLoop.main)
             .sink { [weak self] in
                 guard let self, self.isRemoteModeOn, !self.includedParts.contains(true) else { return }
@@ -65,6 +72,10 @@ final class AppController: ObservableObject {
         if prefs.includeBattery && sleep.hasBattery { parts.append(sleep.preventOnBattery) }
         if prefs.includeLid { parts.append(sleep.lidModeEnabled) }
         if prefs.includeDisplay { parts.append(display.isActive || display.isRebuilding || displaySkippedForExternal) }
+        // UU 保活也是远程模式的一项；只选择 UU 时仍能通过主按钮关闭。
+        if prefs.launchUU && network.isUUInstalled {
+            parts.append(network.isUUKeepAliveEnabled || network.isLaunchingUU || network.uuStatus == .running)
+        }
         return parts
     }
 
@@ -76,6 +87,7 @@ final class AppController: ObservableObject {
     }
 
     func setRemoteMode(_ on: Bool) {
+        network.refreshUUStatus()
         isRemoteModeOn = on
         // 退出模式时无论虚拟屏幕是否仍被纳入，都要取消待补建
         if !on { displaySkippedForExternal = false }
@@ -85,9 +97,17 @@ final class AppController: ObservableObject {
             displaySkippedForExternal = on && shouldSkipDisplay && !display.isActive
             display.setEnabled(on && !displaySkippedForExternal)
         }
-        // 只在开启时拉起 UU 远程；关闭远程模式不退出 UU，以免断开正在进行的远程会话
-        if on && prefs.launchUU { network.launchUUIfNeeded() }
+        // 自动启动仍只在一键开启时执行一次，持续保活需要单独勾选。
+        if on && prefs.launchUU {
+            if network.isUUInstalled {
+                network.launchUUIfNeeded()
+            } else if !prefs.keepUUAlive {
+                // 启用保活时，未安装提示已由 updateUUKeepAlive 写入。
+                network.lastError = "未找到 UU 远程，请先将其安装到应用程序文件夹。"
+            }
+        }
         if prefs.includeLid { sleep.lidModeEnabled = on }
+        if on && includedParts.isEmpty { isRemoteModeOn = false }
     }
 
     func didFinishLaunching() {
@@ -96,6 +116,7 @@ final class AppController: ObservableObject {
     }
 
     func willTerminate() {
+        network.updateUUKeepAlive(remoteModeOn: false, launchUU: prefs.launchUU, keepAlive: prefs.keepUUAlive)
         display.stop()
         if prefs.restoreOnQuit { sleep.restoreLidSleepSynchronously() }
     }

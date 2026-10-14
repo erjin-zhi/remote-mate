@@ -27,9 +27,14 @@ enum MenuBarIcon {
             stand.line(to: NSPoint(x: 14, y: 1.5))
             stand.stroke()
 
-            let light = NSBezierPath(ovalIn: NSRect(x: 7.5, y: 8, width: 5, height: 5))
-            light.lineWidth = 1.25
-            if active { light.fill() } else { light.stroke() }
+            // 空心态需要足够大的内孔，否则在菜单栏尺寸下看起来和实心一样
+            if active {
+                NSBezierPath(ovalIn: NSRect(x: 7, y: 7.5, width: 6, height: 6)).fill()
+            } else {
+                let ring = NSBezierPath(ovalIn: NSRect(x: 7, y: 7.5, width: 6, height: 6))
+                ring.lineWidth = 1
+                ring.stroke()
+            }
             return true
         }
         image.isTemplate = true

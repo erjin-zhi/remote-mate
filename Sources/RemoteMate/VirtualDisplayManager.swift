@@ -86,6 +86,8 @@ final class VirtualDisplayManager: ObservableObject {
     @Published private(set) var displayID: CGDirectDisplayID = 0
     @Published private(set) var currentModeText = ""
     @Published var lastError: String?
+    /// 是否接有本机屏幕和本虚拟屏幕以外的显示器，随显示器插拔实时更新。
+    @Published private(set) var hasExternalDisplay = false
 
     private var display: CGVirtualDisplay?
     private var appliedHiDPI = false
@@ -99,6 +101,27 @@ final class VirtualDisplayManager: ObservableObject {
         refreshRate = defaults.double(forKey: Keys.refreshRate)
         hiDPI = defaults.bool(forKey: Keys.hiDPI)
         makeMainOnStart = defaults.bool(forKey: Keys.makeMain)
+        hasExternalDisplay = Self.detectExternalDisplay()
+        // 管理器与应用同生命周期，回调里直接取未保留的指针
+        CGDisplayRegisterReconfigurationCallback({ _, flags, userInfo in
+            guard !flags.contains(.beginConfigurationFlag), let userInfo else { return }
+            let manager = Unmanaged<VirtualDisplayManager>.fromOpaque(userInfo).takeUnretainedValue()
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { manager.hasExternalDisplay = VirtualDisplayManager.detectExternalDisplay() }
+            }
+        }, Unmanaged.passUnretained(self).toOpaque())
+    }
+
+    private static let vendorID: UInt32 = 0x524D
+
+    private static func detectExternalDisplay() -> Bool {
+        var count: UInt32 = 0
+        CGGetOnlineDisplayList(0, nil, &count)
+        var ids = [CGDirectDisplayID](repeating: 0, count: Int(count))
+        CGGetOnlineDisplayList(count, &ids, &count)
+        return ids.prefix(Int(count)).contains {
+            CGDisplayIsBuiltin($0) == 0 && CGDisplayVendorNumber($0) != vendorID
+        }
     }
 
     var resolution: Resolution { Resolution(width: width, height: height) }
@@ -134,7 +157,7 @@ final class VirtualDisplayManager: ObservableObject {
         // 按约 96 PPI 估算物理尺寸，让系统给出合理的默认缩放
         descriptor.sizeInMillimeters = CGSize(width: Double(width) / 96 * 25.4, height: Double(height) / 96 * 25.4)
         // 固定的厂商/序列号让 macOS 记住该屏幕的排列位置
-        descriptor.vendorID = 0x524D
+        descriptor.vendorID = Self.vendorID
         descriptor.productID = 0x0001
         descriptor.serialNum = 0x0001
         descriptor.terminationHandler = { [weak self] _, _ in

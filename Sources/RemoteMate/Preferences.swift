@@ -8,6 +8,7 @@ final class Preferences: ObservableObject {
         static let includeBattery = "remote.includeBattery"
         static let includeLid = "remote.includeLid"
         static let includeDisplay = "remote.includeDisplay"
+        static let skipDisplayIfExternal = "remote.skipDisplayIfExternal"
         static let launchUU = "remote.launchUU"
         static let autoStartRemote = "app.autoStartRemote"
         static let restoreOnQuit = "app.restoreLidOnQuit"
@@ -19,6 +20,7 @@ final class Preferences: ObservableObject {
             Keys.includeBattery: false,
             Keys.includeLid: true,
             Keys.includeDisplay: true,
+            Keys.skipDisplayIfExternal: true,
             Keys.launchUU: true,
             Keys.autoStartRemote: false,
             Keys.restoreOnQuit: true,
@@ -35,6 +37,7 @@ final class Preferences: ObservableObject {
     @Published var includeBattery: Bool { didSet { save(includeBattery, Keys.includeBattery) } }
     @Published var includeLid: Bool { didSet { save(includeLid, Keys.includeLid) } }
     @Published var includeDisplay: Bool { didSet { save(includeDisplay, Keys.includeDisplay) } }
+    @Published var skipDisplayIfExternal: Bool { didSet { save(skipDisplayIfExternal, Keys.skipDisplayIfExternal) } }
     @Published var launchUU: Bool { didSet { save(launchUU, Keys.launchUU) } }
     @Published var autoStartRemote: Bool { didSet { save(autoStartRemote, Keys.autoStartRemote) } }
     @Published var restoreOnQuit: Bool { didSet { save(restoreOnQuit, Keys.restoreOnQuit) } }
@@ -47,6 +50,7 @@ final class Preferences: ObservableObject {
         includeBattery = d.bool(forKey: Keys.includeBattery)
         includeLid = d.bool(forKey: Keys.includeLid)
         includeDisplay = d.bool(forKey: Keys.includeDisplay)
+        skipDisplayIfExternal = d.bool(forKey: Keys.skipDisplayIfExternal)
         launchUU = d.bool(forKey: Keys.launchUU)
         autoStartRemote = d.bool(forKey: Keys.autoStartRemote)
         restoreOnQuit = d.bool(forKey: Keys.restoreOnQuit)

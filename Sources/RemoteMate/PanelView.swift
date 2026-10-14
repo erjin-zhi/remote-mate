@@ -462,10 +462,12 @@ struct PanelView: View {
                 HStack {
                     Toggle("接电不休眠", isOn: $prefs.includeAC)
                     Toggle("电池不休眠", isOn: $prefs.includeBattery)
+                    Toggle("合盖不休眠", isOn: $prefs.includeLid)
                 }
                 HStack {
-                    Toggle("合盖不休眠", isOn: $prefs.includeLid)
                     Toggle("虚拟屏幕", isOn: $prefs.includeDisplay)
+                    Toggle("已接外接显示器时不创建", isOn: $prefs.skipDisplayIfExternal)
+                        .disabled(!prefs.includeDisplay)
                 }
                 Toggle("UU 远程未运行时自动启动", isOn: $prefs.launchUU)
                 Divider()

@@ -465,7 +465,7 @@ struct PanelView: View {
                     Toggle("合盖不休眠", isOn: $prefs.includeLid)
                 }
                 HStack {
-                    Toggle("虚拟屏幕", isOn: $prefs.includeDisplay)
+                    Toggle("创建虚拟屏幕", isOn: $prefs.includeDisplay)
                     Toggle("已接外接显示器时不创建", isOn: $prefs.skipDisplayIfExternal)
                         .disabled(!prefs.includeDisplay)
                 }

@@ -2,6 +2,9 @@
 build/
 .DS_Store
 
+# Local agent instructions
+/AGENTS.md
+
 # Local configuration and signing material
 .env
 .env.*

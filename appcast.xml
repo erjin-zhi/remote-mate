@@ -3,6 +3,26 @@
     <channel>
         <title>RemoteMate</title>
         <item>
+            <title>1.2.0</title>
+            <pubDate>Wed, 14 Oct 2026 19:11:42 +0800</pubDate>
+            <sparkle:version>5</sparkle:version>
+            <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## 新增
+
+- **外接显示器时不创建虚拟屏幕**：在「偏好设置」的一键远程模式中开启后，已接外接显示器时不再额外创建虚拟屏幕；远程模式期间拔掉外接显示器会自动补建。
+- **分辨率推荐**：分辨率菜单按 Mac、iPad、iPhone 等控制端设备分组，并标注适用设备和比例，选择与控制端一致的比例可避免黑边。
+
+## 修复
+
+- 单独打开下方的不休眠或虚拟屏幕开关时，一键远程模式按钮不再误显示为开启。
+- 修改分辨率或切换 HiDPI 时，远程模式不再被意外关闭。
+- 远程模式关闭时，菜单栏图标的状态点现在清楚地显示为空心。
+]]></description>
+            <enclosure url="https://github.com/erjin-zhi/remote-mate/releases/download/v1.2.0/RemoteMate-1.2.0-macOS-arm64.dmg" length="2945729" type="application/octet-stream" sparkle:edSignature="pkb0fkZMrnaJZibSlYkdhJGfYNbKiVKu8IFm0X0OMBNFKoB9tYn/EWmFSSKU1fCB0V1dcZkD0wBmlSIYiAh1CQ=="/>
+        </item>
+        <item>
             <title>1.1.1</title>
             <pubDate>Tue, 13 Oct 2026 17:15:38 +0800</pubDate>
             <sparkle:version>4</sparkle:version>

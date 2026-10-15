@@ -3,6 +3,40 @@
     <channel>
         <title>RemoteMate</title>
         <item>
+            <title>2.0.0</title>
+            <pubDate>Thu, 15 Oct 2026 16:28:23 +0800</pubDate>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>2.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[RemoteMate 2.0.0：一键就绪，随时远程。
+
+## 新增
+
+- **独立设置窗口**：以「通用」「远程」「关于」三个分栏集中管理启动、通知、一键远程包含项与应用更新，主面板专注即时操作和状态。
+- **菜单栏右键菜单**：右键或按住 Control 点击图标，即可打开设置、关于、检查更新或退出。
+- **远程状态通知**：在远程模式开启或关闭、供电变化影响防休眠、外接显示器插拔触发虚拟屏幕切换时提醒，也会报告合盖设置和虚拟屏幕失败。普通单项手动切换不会重复提醒。
+- **虚拟屏幕自动暂停与恢复**：远程模式下，使用电池且未开启电池防休眠时暂停虚拟屏幕；接回电源或开启电池防休眠后，结合外接显示器状态恢复。
+
+## 改进与修复
+
+- 外接显示器接入时可自动关闭虚拟屏幕，拔掉后在供电允许时补建；切换电源与插拔显示器同时发生时，优先遵守电池暂停策略。
+- 区分虚拟屏幕「已暂停」和「尚未创建」，面板明确显示等待供电或外接显示器断开的原因；关闭远程模式会取消待恢复屏幕。
+- 合盖休眠状态按系统实际结果显示，等待授权、授权取消或设置失败时不再误报已生效。
+- 供电变化通知先报告已确认的状态，合盖授权结束后再补充结果；通知中心以最新状态替换旧提醒。
+- 更新 README 功能介绍与界面截图。
+
+## 升级说明
+
+- 保留已有偏好。远程状态通知默认开启，首次使用需要允许系统通知，可在「设置 → 通用」中关闭。
+- UU 保活仍为独立的可选功能，默认关闭；需开启远程模式并同时勾选「启动 UU 远程」和保活选项。启用后手动退出 UU 也会被后台重新启动，关闭远程模式即可停止保活。
+- 退出 RemoteMate 会关闭防休眠和虚拟屏幕，默认恢复合盖休眠，不会退出 UU；可在通用设置中调整退出时的合盖行为。
+
+支持 macOS 14 及以上、Apple Silicon Mac。
+]]></description>
+            <enclosure url="https://github.com/erjin-zhi/remote-mate/releases/download/v2.0.0/RemoteMate-2.0.0-macOS-arm64.dmg" length="3020020" type="application/octet-stream" sparkle:edSignature="SOfeobourfbGAZgza+wCNk/yb2MhcmFiMXY9C0BvUNs6kHLSJ/oYp1PfVFYngjW5YvdwrcqGrNQRN/Im7rmdAw=="/>
+        </item>
+        <item>
             <title>1.3.0</title>
             <pubDate>Wed, 14 Oct 2026 21:33:51 +0800</pubDate>
             <sparkle:version>6</sparkle:version>
@@ -48,19 +82,6 @@
 - 远程模式关闭时，菜单栏图标的状态点现在清楚地显示为空心。
 ]]></description>
             <enclosure url="https://github.com/erjin-zhi/remote-mate/releases/download/v1.2.0/RemoteMate-1.2.0-macOS-arm64.dmg" length="2945729" type="application/octet-stream" sparkle:edSignature="pkb0fkZMrnaJZibSlYkdhJGfYNbKiVKu8IFm0X0OMBNFKoB9tYn/EWmFSSKU1fCB0V1dcZkD0wBmlSIYiAh1CQ=="/>
-        </item>
-        <item>
-            <title>1.1.1</title>
-            <pubDate>Tue, 13 Oct 2026 17:15:38 +0800</pubDate>
-            <sparkle:version>4</sparkle:version>
-            <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## 改进
-
-- **一键远程模式卡片**：鼠标移上去时显示为手型，卡片会随指针轻微倾斜，并在指针处出现柔和的高光。
-]]></description>
-            <enclosure url="https://github.com/erjin-zhi/remote-mate/releases/download/v1.1.1/RemoteMate-1.1.1-macOS-arm64.dmg" length="2940678" type="application/octet-stream" sparkle:edSignature="M55CX5QuU9Gkx0Ax8G46hmrEqGh7cUuw/hxw2JwSmLjre2gTx3V9yOBRiE6dUYAQmmXGHeixzQ1iVtEsMw/9Dg=="/>
         </item>
     </channel>
 </rss>

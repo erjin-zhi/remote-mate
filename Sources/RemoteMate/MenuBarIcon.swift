@@ -1,12 +1,23 @@
 import AppKit
 
-/// Fixed monitor silhouette with a hollow/solid status light.
+/// Fixed monitor silhouette with a hollow/half-filled/solid status light.
 /// Follows the one-click remote mode state, never remote connection status.
 enum MenuBarIcon {
-    static let idle = make(active: false)
-    static let active = make(active: true)
+    private enum Fill { case empty, half, full }
 
-    private static func make(active: Bool) -> NSImage {
+    static let idle = make(fill: .empty)
+    static let partial = make(fill: .half)
+    static let active = make(fill: .full)
+
+    static func image(for state: RemoteModeStatus.State) -> NSImage {
+        switch state {
+        case .off: return idle
+        case .partial, .paused: return partial
+        case .on: return active
+        }
+    }
+
+    private static func make(fill: Fill) -> NSImage {
         let image = NSImage(size: NSSize(width: 20, height: 18), flipped: false) { _ in
             NSColor.black.setStroke()
             NSColor.black.setFill()
@@ -28,10 +39,19 @@ enum MenuBarIcon {
             stand.stroke()
 
             // 空心态需要足够大的内孔，否则在菜单栏尺寸下看起来和实心一样
-            if active {
-                NSBezierPath(ovalIn: NSRect(x: 7, y: 7.5, width: 6, height: 6)).fill()
-            } else {
-                let ring = NSBezierPath(ovalIn: NSRect(x: 7, y: 7.5, width: 6, height: 6))
+            let dot = NSRect(x: 7, y: 7.5, width: 6, height: 6)
+            switch fill {
+            case .full:
+                NSBezierPath(ovalIn: dot).fill()
+            case .half:
+                let half = NSBezierPath()
+                half.appendArc(withCenter: NSPoint(x: dot.midX, y: dot.midY),
+                               radius: dot.width / 2, startAngle: 90, endAngle: 270)
+                half.close()
+                half.fill()
+                fallthrough
+            case .empty:
+                let ring = NSBezierPath(ovalIn: dot)
                 ring.lineWidth = 1
                 ring.stroke()
             }

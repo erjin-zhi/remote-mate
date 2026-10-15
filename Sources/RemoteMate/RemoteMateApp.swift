@@ -32,7 +32,7 @@ struct MenuBarLabel: View {
 
     var body: some View {
         let state = controller.remoteState
-        Image(nsImage: state == .off ? MenuBarIcon.idle : MenuBarIcon.active)
+        Image(nsImage: MenuBarIcon.image(for: state))
             .renderingMode(.template)
             .frame(width: 20, height: 18)
             .help("RemoteMate · 远程伴侣 · \(statusDescription)")

@@ -13,6 +13,7 @@ struct RemoteMateApp: App {
                 .environmentObject(controller.display)
                 .environmentObject(controller.network)
                 .environmentObject(controller.updates)
+                .environmentObject(controller.notifications)
         } label: {
             MenuBarLabel()
                 .environmentObject(controller.prefs)

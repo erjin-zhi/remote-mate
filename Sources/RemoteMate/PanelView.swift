@@ -6,6 +6,7 @@ struct PanelView: View {
     @EnvironmentObject private var display: VirtualDisplayManager
     @EnvironmentObject private var network: NetworkMonitor
     @EnvironmentObject private var updates: UpdateService
+    @EnvironmentObject private var notifications: StatusNotifications
 
     @State private var customWidth = ""
     @State private var customHeight = ""
@@ -48,6 +49,7 @@ struct PanelView: View {
             Task {
                 await sleep.refreshLidState()
                 await sleep.refreshPasswordless()
+                await notifications.refreshPermission()
             }
         }
         .onDisappear { network.stopAutoRefresh() }
@@ -504,6 +506,17 @@ struct PanelView: View {
                 ))
                 Toggle("启动后自动开启远程模式", isOn: $prefs.autoStartRemote)
                 Toggle("退出时恢复合盖休眠", isOn: $prefs.restoreOnQuit)
+                Toggle("远程状态变化时通知", isOn: $prefs.notifySleepChanges)
+                if prefs.notifySleepChanges {
+                    Text(notifications.permissionMessage)
+                        .font(.caption)
+                        .foregroundStyle(notifications.needsSettings ? .orange : .secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if notifications.needsSettings {
+                        Button("打开系统通知设置") { notifications.openSettings() }
+                            .controlSize(.small)
+                    }
+                }
                 if updates.isAvailable {
                     Divider()
                     HStack {

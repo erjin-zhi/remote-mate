@@ -10,6 +10,7 @@ final class AppController: ObservableObject {
     let display: VirtualDisplayManager
     let network: NetworkMonitor
     let updates = UpdateService()
+    let notifications = StatusNotifications()
 
     private var displayAutomation = RemoteDisplayAutomation()
     /// 只有用户点过顶部的一键按钮才算进入远程模式；单独操作下方各项开关不影响它。
@@ -168,8 +169,27 @@ final class AppController: ObservableObject {
         if on && modeStatus.otherParts.isEmpty && modeStatus.displaySatisfied == nil { isRemoteModeOn = false }
     }
 
+    var featureStatus: FeatureStatus {
+        let virtualScreen: FeatureStatus.VirtualScreen
+        if display.isRebuilding { virtualScreen = .rebuilding }
+        else if display.isActive { virtualScreen = .enabled }
+        else if displayAutomation.isDisplayPausedForPower { virtualScreen = .pausedForBattery }
+        else if displayAutomation.isWaitingForPower { virtualScreen = .waitingForPower }
+        else if displayAutomation.isWaitingForExternalDisplay { virtualScreen = .waiting }
+        else { virtualScreen = .disabled }
+        return FeatureStatus(
+            sleep: sleep.status,
+            remoteMode: isRemoteModeOn,
+            virtualScreen: virtualScreen,
+            uuKeepAlive: network.isUUKeepAliveEnabled,
+            hasExternalDisplay: display.hasExternalDisplay,
+            sleepError: sleep.lastError,
+            displayError: display.lastError
+        )
+    }
 
     func didFinishLaunching() {
+        notifications.start(controller: self)
         updates.start()
         if prefs.autoStartRemote { setRemoteMode(true) }
     }

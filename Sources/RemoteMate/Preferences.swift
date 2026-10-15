@@ -12,6 +12,7 @@ final class Preferences: ObservableObject {
         static let launchUU = "remote.launchUU"
         static let keepUUAlive = "remote.keepUUAlive"
         static let autoStartRemote = "app.autoStartRemote"
+        static let notifySleepChanges = "app.notifySleepChanges"
         static let restoreOnQuit = "app.restoreLidOnQuit"
     }
 
@@ -26,6 +27,7 @@ final class Preferences: ObservableObject {
             Keys.keepUUAlive: false,
             Keys.autoStartRemote: false,
             Keys.restoreOnQuit: true,
+            Keys.notifySleepChanges: true,
             "sleep.keepDisplayAwake": true,
             "display.width": 1920,
             "display.height": 1080,
@@ -43,6 +45,7 @@ final class Preferences: ObservableObject {
     @Published var launchUU: Bool { didSet { save(launchUU, Keys.launchUU) } }
     @Published var keepUUAlive: Bool { didSet { save(keepUUAlive, Keys.keepUUAlive) } }
     @Published var autoStartRemote: Bool { didSet { save(autoStartRemote, Keys.autoStartRemote) } }
+    @Published var notifySleepChanges: Bool { didSet { save(notifySleepChanges, Keys.notifySleepChanges) } }
     @Published var restoreOnQuit: Bool { didSet { save(restoreOnQuit, Keys.restoreOnQuit) } }
     @Published private(set) var launchAtLogin = SMAppService.mainApp.status == .enabled
     @Published var lastError: String?
@@ -60,6 +63,7 @@ final class Preferences: ObservableObject {
         launchUU = d.bool(forKey: Keys.launchUU)
         keepUUAlive = d.bool(forKey: Keys.keepUUAlive)
         autoStartRemote = d.bool(forKey: Keys.autoStartRemote)
+        notifySleepChanges = d.bool(forKey: Keys.notifySleepChanges)
         restoreOnQuit = d.bool(forKey: Keys.restoreOnQuit)
     }
 

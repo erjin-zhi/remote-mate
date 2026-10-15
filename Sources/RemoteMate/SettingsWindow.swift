@@ -209,7 +209,7 @@ struct AboutSettingsView: View {
                             .font(.callout).foregroundStyle(.secondary)
                             .textSelection(.enabled)
                     }
-                    Text("让 Mac 在远程桌面时保持唤醒、提供虚拟屏幕")
+                    Text("一键就绪，随时远程")
                         .font(.callout).foregroundStyle(.secondary)
                 }
                 if updates.isAvailable {

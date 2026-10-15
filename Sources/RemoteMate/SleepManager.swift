@@ -41,6 +41,8 @@ final class SleepManager: ObservableObject {
 
     private var systemAssertion: IOPMAssertionID?
     private var displayAssertion: IOPMAssertionID?
+    @Published private(set) var lidStateAvailable = false
+    @Published private(set) var lidChangeFailed = false
     private var lidStateKnown = false
     private var lidReconcilePending = false
     /// 系统的 disablesleep 是否由本应用打开；只撤销自己打开的，避免误改其他工具的设置。
@@ -63,6 +65,22 @@ final class SleepManager: ObservableObject {
             lidStateKnown = true
             reconcileLid()
         }
+    }
+
+    var status: SleepStatus {
+        let power: SleepStatus.Power
+        switch powerSource {
+        case .ac: power = .ac
+        case .battery: power = .battery
+        case .unknown: power = .unknown
+        }
+        return SleepStatus(
+            power: power,
+            idlePrevention: isPreventingIdleSleep,
+            displayPrevention: displayAssertion != nil,
+            lid: lidBusy ? .changing : (!lidStateAvailable ? .unknown : (lidSleepDisabled ? .enabled : .disabled)),
+            lidChangeFailed: lidChangeFailed
+        )
     }
 
     // MARK: - 空闲防休眠（IOPMAssertion，无需权限）
@@ -109,7 +127,8 @@ final class SleepManager: ObservableObject {
             MainActor.assumeIsolated { manager.refreshPowerSource() }
         }
         if let source = IOPSNotificationCreateRunLoopSource(callback, context)?.takeRetainedValue() {
-            CFRunLoopAddSource(CFRunLoopGetMain(), source, .defaultMode)
+            // 菜单或控件追踪期间也及时处理供电变化。
+            CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         }
     }
 
@@ -148,7 +167,10 @@ final class SleepManager: ObservableObject {
 
     func refreshLidState() async {
         let result = await Shell.runAsync("/usr/bin/pmset", ["-g"])
-        lidSleepDisabled = Self.parseSleepDisabled(result.output)
+        lidStateAvailable = result.status == 0 && result.output.split(separator: "\n").contains {
+            $0.split(whereSeparator: { $0 == " " || $0 == "\t" }).first == "SleepDisabled"
+        }
+        if lidStateAvailable { lidSleepDisabled = Self.parseSleepDisabled(result.output) }
     }
 
     static func parseSleepDisabled(_ output: String) -> Bool {
@@ -174,15 +196,20 @@ final class SleepManager: ObservableObject {
         let want = lidShouldBeActive
         if want == lidSleepDisabled {
             if want { ownsLidSetting = true }
+            // 系统状态已与期望一致（如撤回开关或插拔电源后），之前的失败不再适用。
+            if lidChangeFailed { lidChangeFailed = false }
             return
         }
         // 系统已被其他工具禁用休眠时不去撤销
         if !want && !ownsLidSetting { return }
+        // 在调度 Task 前标记，避免连续设置启动并行的管理员操作。
+        lidBusy = true
         Task { await applyLid(want) }
     }
 
     private func applyLid(_ disabled: Bool) async {
         lidBusy = true
+        lidChangeFailed = false
         let value = disabled ? "1" : "0"
         var result: ShellResult = (1, "")
         if passwordlessEnabled {
@@ -194,12 +221,14 @@ final class SleepManager: ObservableObject {
             result = await Shell.runAsAdmin("/usr/bin/pmset -a disablesleep \(value)")
         }
         await refreshLidState()
-        if lidSleepDisabled == disabled {
+        if lidStateAvailable && lidSleepDisabled == disabled {
             ownsLidSetting = disabled
         } else if Shell.isUserCancel(result) {
-            // 用户取消授权：开启时撤回开关，避免反复弹窗
-            if disabled { lidModeEnabled = false }
+            // 用户取消授权：开启时撤回开关，避免反复弹窗；撤回后状态一致，不算失败。
+            // 关闭时取消则合盖不休眠仍在生效，需要提示。
+            if disabled { lidModeEnabled = false } else { lidChangeFailed = true }
         } else {
+            lidChangeFailed = true
             lastError = "设置合盖不休眠失败：\(result.output.trimmingCharacters(in: .whitespacesAndNewlines))"
         }
         lidBusy = false

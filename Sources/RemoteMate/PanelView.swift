@@ -279,10 +279,14 @@ struct PanelView: View {
     }
 
     private var lidSubtitle: String {
-        if !sleep.lidModeEnabled { return "跟随上面的供电开关生效" }
-        if sleep.lidShouldBeActive {
-            return sleep.lidSleepDisabled ? "生效中 · 合盖也不休眠，注意散热" : "正在应用…"
+        if sleep.lidBusy { return "正在切换 · 可能需要管理员授权" }
+        if !sleep.lidStateAvailable { return "暂时无法确认系统状态" }
+        if sleep.lidChangeFailed {
+            return sleep.lidSleepDisabled ? "切换未完成 · 合盖不休眠仍在生效" : "切换未完成 · 合盖不休眠未生效"
         }
+        if sleep.lidSleepDisabled { return "生效中 · 合盖也不休眠，注意散热" }
+        if !sleep.lidModeEnabled { return "跟随上面的供电开关生效" }
+        if sleep.lidShouldBeActive { return "未生效 · 请检查管理员授权" }
         return sleep.powerSource == .battery
             ? "已暂停 · 使用电池且未开启「使用电池时不休眠」"
             : "已暂停 · 未开启「接通电源时不休眠」"

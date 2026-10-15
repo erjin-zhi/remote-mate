@@ -1,6 +1,6 @@
 {
-  "version": "2.0.0",
-  "build": "7",
+  "version": "2.0.1",
+  "build": "8",
   "minimumSystemVersion": "14.0",
   "feedURL": "https://raw.githubusercontent.com/erjin-zhi/remote-mate/updates/appcast.xml",
   "repository": "erjin-zhi/remote-mate",

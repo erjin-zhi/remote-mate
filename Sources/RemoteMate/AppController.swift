@@ -11,8 +11,7 @@ final class AppController: ObservableObject {
     let network: NetworkMonitor
     let updates = UpdateService()
 
-    /// 远程模式开启时因已有外接显示器而跳过了虚拟屏幕；外接显示器拔掉后据此补建。
-    private var displaySkippedForExternal = false
+    private var displayAutomation = RemoteDisplayAutomation()
     /// 只有用户点过顶部的一键按钮才算进入远程模式；单独操作下方各项开关不影响它。
     @Published private(set) var isRemoteModeOn = false
     private var cancellables: Set<AnyCancellable> = []
@@ -30,31 +29,59 @@ final class AppController: ObservableObject {
             }
             .store(in: &cancellables)
 
+        // 只有插拔外接显示器和供电变化才会自动开关虚拟屏幕；
+        // 修改包含项不立即生效（设置页有说明），否则会关掉正在使用的屏幕。
         display.$hasExternalDisplay
-            .removeDuplicates()
-            .sink { [weak self] hasExternal in
-                guard let self, !hasExternal, self.isRemoteModeOn, self.displaySkippedForExternal else { return }
-                self.displaySkippedForExternal = false
-                self.display.start()
+            .combineLatest(sleep.$powerSource, sleep.$preventOnBattery)
+            .removeDuplicates { $0.0 == $1.0 && $0.1 == $1.1 && $0.2 == $1.2 }
+            .sink { [weak self] hasExternal, powerSource, preventOnBattery in
+                guard let self else { return }
+                let action = self.displayAutomation.externalDisplayChanged(
+                    hasExternal: hasExternal,
+                    remoteModeOn: self.isRemoteModeOn,
+                    includeDisplay: self.prefs.includeDisplay,
+                    skipIfExternal: self.prefs.skipDisplayIfExternal,
+                    isActive: self.display.isActive,
+                    isRebuilding: self.display.isRebuilding,
+                    powerAllowsDisplay: powerSource != .battery || preventOnBattery
+                )
+                switch action {
+                case .none: break
+                case .start: self.display.start()
+                case .stop: self.display.stop()
+                }
             }
             .store(in: &cancellables)
 
-        // 屏幕一旦真正创建（含用户手动打开），跳过标记就失效了，
-        // 否则之后手动关掉屏幕时模式仍显示开启，拔掉外接屏还会被重新创建。
+        // 取消纳入时只撤销待补建 / 待恢复，不动当前屏幕
+        prefs.$includeDisplay.combineLatest(prefs.$skipDisplayIfExternal)
+            .sink { [weak self] includeDisplay, skipIfExternal in
+                self?.displayAutomation.preferencesChanged(includeDisplay: includeDisplay, skipIfExternal: skipIfExternal)
+            }
+            .store(in: &cancellables)
+
+        // 屏幕一旦真正创建（含用户手动打开），取消待补建，避免后续插拔撤销用户的手动关闭。
+        // 顶部是否正常独立按当前屏幕和偏好判断，不依赖这个标记。
         display.$isActive
             .removeDuplicates()
             .sink { [weak self] active in
-                if active { self?.displaySkippedForExternal = false }
+                if active { self?.displayAutomation.cancelPendingStart() }
             }
             .store(in: &cancellables)
 
         // 远程模式下用户把纳入的各项都手动关掉后，视为退出远程模式，
         // 否则之后单独打开某一项时按钮又会显示为「部分开启」。
         // 未启用保活时，退出最后一个运行中的 UU 也会退出模式；保活中则继续等待重启。
+        var hadOtherEnabled = modeStatus.hasOtherEnabled
         sleep.objectWillChange.merge(with: display.objectWillChange, prefs.objectWillChange, network.objectWillChange)
             .receive(on: RunLoop.main)
             .sink { [weak self] in
-                guard let self, self.isRemoteModeOn, !self.includedParts.contains(true) else { return }
+                guard let self else { return }
+                let status = self.modeStatus
+                let shouldExit = status.shouldExit(hadOtherEnabled: hadOtherEnabled)
+                hadOtherEnabled = status.hasOtherEnabled
+                guard self.isRemoteModeOn, shouldExit else { return }
+                self.displayAutomation.cancelPendingStart()
                 self.isRemoteModeOn = false
             }
             .store(in: &cancellables)
@@ -64,38 +91,69 @@ final class AppController: ObservableObject {
         prefs.skipDisplayIfExternal && display.hasExternalDisplay
     }
 
-    enum RemoteState { case off, partial, on }
+    private var powerAllowsDisplay: Bool {
+        sleep.powerSource != .battery || sleep.preventOnBattery
+    }
 
-    private var includedParts: [Bool] {
+    var isDisplayPausedForBattery: Bool {
+        isRemoteModeOn && prefs.includeDisplay && displayAutomation.isDisplayPausedForPower
+            && !display.isActive && !display.isRebuilding
+    }
+
+    var isDisplayWaitingToCreateForPower: Bool {
+        isRemoteModeOn && prefs.includeDisplay && displayAutomation.powerWaitReason == .pendingCreation
+            && !display.isActive && !display.isRebuilding
+    }
+
+    var displayPowerWaitDescription: String {
+        let state = isDisplayPausedForBattery ? "虚拟屏幕已暂停" : "虚拟屏幕尚未创建"
+        return shouldSkipDisplay
+            ? "\(state)，等待外接显示器断开且供电允许后创建"
+            : "\(state)，接电或开启「使用电池时不休眠」后创建"
+    }
+
+    typealias RemoteState = RemoteModeStatus.State
+
+    private var modeStatus: RemoteModeStatus {
         var parts: [Bool] = []
         if prefs.includeAC { parts.append(sleep.preventOnAC) }
         if prefs.includeBattery && sleep.hasBattery { parts.append(sleep.preventOnBattery) }
         if prefs.includeLid { parts.append(sleep.lidModeEnabled) }
-        if prefs.includeDisplay { parts.append(display.isActive || display.isRebuilding || displaySkippedForExternal) }
+        let displaySatisfied: Bool? = prefs.includeDisplay
+            ? RemoteDisplayAutomation.isRequirementSatisfied(
+                hasExternal: display.hasExternalDisplay,
+                skipIfExternal: prefs.skipDisplayIfExternal,
+                isActive: display.isActive,
+                isRebuilding: display.isRebuilding
+            ) : nil
         // UU 保活也是远程模式的一项；只选择 UU 时仍能通过主按钮关闭。
         if prefs.launchUU && network.isUUInstalled {
             parts.append(network.isUUKeepAliveEnabled || network.isLaunchingUU || network.uuStatus == .running)
         }
-        return parts
+        return RemoteModeStatus(otherParts: parts, displaySatisfied: displaySatisfied,
+                                displayPaused: isDisplayPausedForBattery || isDisplayWaitingToCreateForPower)
     }
 
     /// 未通过一键按钮开启时始终为关闭；开启后再根据被纳入的各项开关判断是否全部生效。
     var remoteState: RemoteState {
-        let parts = includedParts
-        guard isRemoteModeOn, parts.contains(true) else { return .off }
-        return parts.allSatisfy { $0 } ? .on : .partial
+        modeStatus.state(remoteModeOn: isRemoteModeOn)
     }
 
     func setRemoteMode(_ on: Bool) {
         network.refreshUUStatus()
         isRemoteModeOn = on
         // 退出模式时无论虚拟屏幕是否仍被纳入，都要取消待补建
-        if !on { displaySkippedForExternal = false }
+        if !on { displayAutomation.cancelPendingStart() }
         if prefs.includeAC { sleep.preventOnAC = on }
         if prefs.includeBattery { sleep.preventOnBattery = on }
         if prefs.includeDisplay {
-            displaySkippedForExternal = on && shouldSkipDisplay && !display.isActive
-            display.setEnabled(on && !displaySkippedForExternal)
+            if on {
+                displayAutomation.prepareForRemoteMode(
+                    powerAllowsDisplay: powerAllowsDisplay, skipDisplay: shouldSkipDisplay,
+                    isActive: display.isActive, isRebuilding: display.isRebuilding
+                )
+            }
+            display.setEnabled(on && powerAllowsDisplay && !displayAutomation.isWaitingForExternalDisplay)
         }
         // 自动启动仍只在一键开启时执行一次，持续保活需要单独勾选。
         if on && prefs.launchUU {
@@ -107,8 +165,9 @@ final class AppController: ObservableObject {
             }
         }
         if prefs.includeLid { sleep.lidModeEnabled = on }
-        if on && includedParts.isEmpty { isRemoteModeOn = false }
+        if on && modeStatus.otherParts.isEmpty && modeStatus.displaySatisfied == nil { isRemoteModeOn = false }
     }
+
 
     func didFinishLaunching() {
         updates.start()

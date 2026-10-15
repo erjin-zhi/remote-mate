@@ -82,7 +82,7 @@ struct PanelView: View {
 
     private var remoteModeButton: some View {
         let state = controller.remoteState
-        let tint: Color = state == .on ? .accentColor : (state == .partial ? .orange : .clear)
+        let tint: Color = state == .on ? .accentColor : (state == .off ? .clear : .orange)
         return VStack(spacing: 6) {
             GlareCard(
                 isEnabled: !sleep.lidBusy,
@@ -112,7 +112,15 @@ struct PanelView: View {
                 .foregroundStyle(state == .off ? Color.primary : Color.white)
             }
 
-            if state == .partial {
+            if controller.isDisplayPausedForBattery {
+                Text(controller.displayPowerWaitDescription)
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if controller.isDisplayWaitingToCreateForPower && state != .on {
+                Text(controller.displayPowerWaitDescription)
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if state == .partial {
                 HStack {
                     Text("部分项目未能开启").font(.caption).foregroundStyle(.secondary)
                     Spacer()
@@ -129,6 +137,7 @@ struct PanelView: View {
         case .off: return "一键开启远程模式"
         case .partial: return "远程模式部分开启"
         case .on: return "远程模式已开启"
+        case .paused: return "远程模式已暂停"
         }
     }
 
@@ -299,7 +308,10 @@ struct PanelView: View {
             ToggleRow(
                 title: "启用虚拟屏幕",
                 subtitle: display.isRebuilding ? "正在应用新设置…"
-                    : display.isActive ? displayStatus : "无显示器或合盖时也能获得远程桌面画面",
+                    : display.isActive ? displayStatus
+                    : controller.isDisplayPausedForBattery || controller.isDisplayWaitingToCreateForPower
+                        ? controller.displayPowerWaitDescription
+                    : "无显示器或合盖时也能获得远程桌面画面",
                 // 重建期间仍显示为开启，此时关掉会取消重建，而不是立即再建一块屏幕
                 isOn: Binding(get: { display.isActive || display.isRebuilding }, set: { display.setEnabled($0) })
             )

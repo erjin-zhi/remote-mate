@@ -47,6 +47,7 @@ struct MenuBarLabel: View {
         case .off: mode = "远程模式未开启"
         case .partial: mode = "远程模式部分开启"
         case .on: mode = "远程模式已开启"
+        case .paused: mode = "远程模式已暂停，等待供电恢复"
         }
         var active: [String] = []
         if sleep.isPreventingIdleSleep { active.append("防休眠生效") }

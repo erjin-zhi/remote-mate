@@ -11,6 +11,7 @@ final class AppController: ObservableObject {
     let network: NetworkMonitor
     let updates = UpdateService()
     let notifications = StatusNotifications()
+    private lazy var statusItemMenu = StatusItemMenu(updates: updates)
 
     private var displayAutomation = RemoteDisplayAutomation()
     /// 只有用户点过顶部的一键按钮才算进入远程模式；单独操作下方各项开关不影响它。
@@ -191,6 +192,7 @@ final class AppController: ObservableObject {
     func didFinishLaunching() {
         notifications.start(controller: self)
         updates.start()
+        statusItemMenu.install()
         if prefs.autoStartRemote { setRemoteMode(true) }
     }
 

@@ -5,13 +5,12 @@ struct PanelView: View {
     @EnvironmentObject private var sleep: SleepManager
     @EnvironmentObject private var display: VirtualDisplayManager
     @EnvironmentObject private var network: NetworkMonitor
-    @EnvironmentObject private var updates: UpdateService
-    @EnvironmentObject private var notifications: StatusNotifications
 
     @State private var customWidth = ""
     @State private var customHeight = ""
     @State private var editingCustom = false
-    @State private var showPreferences = false
+    @AppStorage("panel.showDisplayOptions") private var showDisplayOptions = false
+    @State private var contentHeight: CGFloat = 0
     @State private var hoveringUU = false
     @StateObject private var panelWindow = PanelWindowController()
     @FocusState private var focusedField: CustomField?
@@ -21,25 +20,21 @@ struct PanelView: View {
     @ObservedObject private var controller = AppController.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            header
-            remoteModeButton
-            networkCard
-            sleepCard
-            displayCard
-            errors
-            preferencesSection
-            footer
+        // 内容超过屏幕可用高度时改为滚动，避免底部被截断
+        ScrollView(.vertical) {
+            content
+                .background(GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { contentHeight = proxy.size.height }
+                        .onChange(of: proxy.size.height) { _, height in contentHeight = height }
+                })
         }
-        .padding(14)
-        .frame(width: 360)
-        .fixedSize(horizontal: false, vertical: true)
+        .scrollIndicators(.automatic)
+        .scrollBounceBehavior(.basedOnSize)
+        .frame(width: 360, height: panelHeight)
         // 菜单栏弹窗在内容变矮时不会自动缩小，这里按内容实际高度手动调整窗口
-        .background(GeometryReader { proxy in
-            Color.clear
-                .onAppear { panelWindow.fit(height: proxy.size.height) }
-                .onChange(of: proxy.size.height) { _, height in panelWindow.fit(height: height) }
-        })
+        .onChange(of: panelHeight) { _, height in fitWindow(height) }
+        .onAppear { fitWindow(panelHeight) }
         .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
         .background(PanelWindowAccessor(controller: panelWindow))
         .onAppear {
@@ -49,10 +44,35 @@ struct PanelView: View {
             Task {
                 await sleep.refreshLidState()
                 await sleep.refreshPasswordless()
-                await notifications.refreshPermission()
             }
         }
         .onDisappear { network.stopAutoRefresh() }
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            header
+            remoteModeButton
+            networkCard
+            sleepCard
+            displayCard
+            errors
+            footer
+        }
+        .padding(14)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// 内容高度量出来之前不调整窗口，否则首次打开会先缩成 1pt 再撑开
+    private func fitWindow(_ height: CGFloat) {
+        guard contentHeight > 0 else { return }
+        panelWindow.fit(height: height)
+    }
+
+    private var panelHeight: CGFloat {
+        let screenHeight = panelWindow.window?.screen?.visibleFrame.height
+            ?? NSScreen.main?.visibleFrame.height ?? 800
+        return max(1, min(contentHeight, screenHeight - 16))
     }
 
     // MARK: - 头部
@@ -239,7 +259,7 @@ struct PanelView: View {
         if prefs.includeLid { items.append("合盖不休眠") }
         if prefs.includeDisplay { items.append("虚拟屏幕") }
         if prefs.launchUU && network.isUUInstalled { items.append(prefs.keepUUAlive ? "UU 保活" : "启动 UU") }
-        return items.isEmpty ? "未选择可用项目，请检查偏好设置" : items.joined(separator: " · ")
+        return items.isEmpty ? "未选择可用项目，请在「设置…」中勾选" : items.joined(separator: " · ")
     }
 
     // MARK: - 防休眠
@@ -258,10 +278,7 @@ struct PanelView: View {
                     isOn: $sleep.preventOnBattery
                 )
             }
-            ToggleRow(title: "同时保持屏幕常亮", subtitle: "避免远程画面因屏幕休眠而黑屏", isOn: $sleep.keepDisplayAwake)
-
-            Divider()
-
+            ToggleRow(title: "同时保持屏幕常亮", isOn: $sleep.keepDisplayAwake)
             ToggleRow(
                 title: "合盖不休眠",
                 subtitle: lidSubtitle,
@@ -377,6 +394,8 @@ struct PanelView: View {
                 .textFieldStyle(.roundedBorder)
             }
 
+            DisclosureRow(title: "更多显示选项", isExpanded: $showDisplayOptions)
+            if showDisplayOptions {
             HStack {
                 Text("刷新率").font(.callout)
                 Spacer()
@@ -406,6 +425,7 @@ struct PanelView: View {
                 }
             }
             .controlSize(.small)
+            }
         }
     }
 
@@ -455,98 +475,16 @@ struct PanelView: View {
         }
     }
 
-    // MARK: - 偏好设置
-
-    private var preferencesSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Button {
-                showPreferences.toggle()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.bold())
-                        .rotationEffect(.degrees(showPreferences ? 90 : 0))
-                        .foregroundStyle(.secondary)
-                    Text("偏好设置")
-                    Spacer()
-                }
-                .padding(.vertical, 4)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            if showPreferences {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("一键远程模式包含").font(.caption).foregroundStyle(.secondary)
-                HStack {
-                    Toggle("接电不休眠", isOn: $prefs.includeAC)
-                    Toggle("电池不休眠", isOn: $prefs.includeBattery)
-                    Toggle("合盖不休眠", isOn: $prefs.includeLid)
-                }
-                HStack {
-                    Toggle("创建虚拟屏幕", isOn: $prefs.includeDisplay)
-                    Toggle("已接外接显示器时不创建", isOn: $prefs.skipDisplayIfExternal)
-                        .disabled(!prefs.includeDisplay)
-                }
-                HStack {
-                    Toggle("自动启动 UU 远程", isOn: $prefs.launchUU)
-                        .help("开启远程模式时，若 UU 主程序未运行则启动一次。")
-                    Toggle("UU 保活", isOn: $prefs.keepUUAlive)
-                        .disabled(!prefs.launchUU)
-                        .help("需同时开启远程模式和自动启动 UU。每 10 秒检查一次，手动退出 UU 后也会重新启动；关闭远程模式或取消任一勾选即停止保活，不退出 UU。")
-                }
-                if prefs.launchUU && !network.isUUInstalled {
-                    Text("未安装 UU 远程，自动启动与保活不可用")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Divider()
-                Toggle("登录时启动远程伴侣", isOn: Binding(
-                    get: { prefs.launchAtLogin },
-                    set: { prefs.setLaunchAtLogin($0) }
-                ))
-                Toggle("启动后自动开启远程模式", isOn: $prefs.autoStartRemote)
-                Toggle("退出时恢复合盖休眠", isOn: $prefs.restoreOnQuit)
-                Toggle("远程状态变化时通知", isOn: $prefs.notifySleepChanges)
-                if prefs.notifySleepChanges {
-                    Text(notifications.permissionMessage)
-                        .font(.caption)
-                        .foregroundStyle(notifications.needsSettings ? .orange : .secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if notifications.needsSettings {
-                        Button("打开系统通知设置") { notifications.openSettings() }
-                            .controlSize(.small)
-                    }
-                }
-                if updates.isAvailable {
-                    Divider()
-                    HStack {
-                        Toggle("自动检查更新", isOn: Binding(
-                            get: { updates.automaticallyChecks },
-                            set: { updates.setAutomaticallyChecks($0) }
-                        ))
-                        Spacer()
-                        Text("版本 \(updates.currentVersion)").font(.caption).foregroundStyle(.secondary)
-                        Button("检查更新…") { updates.check() }
-                            .controlSize(.small)
-                            .disabled(!updates.canCheck)
-                    }
-                }
-            }
-            .toggleStyle(.checkbox)
-            .padding(.top, 6)
-            }
-        }
-        .font(.callout)
-    }
-
     private var footer: some View {
         HStack {
-            Text("退出后防休眠与虚拟屏幕将自动关闭")
-                .font(.caption2).foregroundStyle(.tertiary)
             Spacer()
+            Button("设置…") { SettingsWindowController.shared.show() }
+                .keyboardShortcut(",")
+                .controlSize(.small)
             Button("退出") { NSApp.terminate(nil) }
                 .keyboardShortcut("q")
                 .controlSize(.small)
+                .help("退出后防休眠与虚拟屏幕将自动关闭")
         }
     }
 }
@@ -647,6 +585,29 @@ extension Card where Accessory == EmptyView {
     }
 }
 
+struct DisclosureRow: View {
+    let title: String
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        Button {
+            isExpanded.toggle()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.right")
+                    .font(.caption.bold())
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                Text(title)
+                Spacer()
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct StatusDot: View {
     let level: NetworkMonitor.Level
 
@@ -711,9 +672,13 @@ struct ToggleRow: View {
 /// 持有承载面板的 NSWindow：设为不透明，并按内容高度调整大小（保持顶边贴着菜单栏）。
 @MainActor
 final class PanelWindowController: ObservableObject {
+    /// 当前承载面板的窗口，供右键菜单弹出前先收起面板
+    static weak var current: NSWindow?
+
     weak var window: NSWindow? {
         didSet {
             guard let window, window !== oldValue else { return }
+            Self.current = window
             window.isOpaque = true
             window.backgroundColor = .windowBackgroundColor
             if let pendingHeight { fit(height: pendingHeight) }
